@@ -10,6 +10,7 @@ import (
 
 	"rivera/graph"
 
+	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -102,16 +103,12 @@ func main() {
 			/// now, we build the river
 			g := graph.New()
 			g.SetColors([]string{
-				"0",
 				"#ff00ff",
-				"#f0000f",
 				"#b00b69",
-				"#262638",
+				"#7272A8",
 			})
-			//commits := make([]*object.Commit, 0, 64)
 			lines := make([]string, 0, 64)
 			cIter.ForEach(func(c *object.Commit) error {
-				//commits = append(commits, c)
 				g.Update(c)
 				for {
 					if g.IsCommitFinished() {
@@ -126,6 +123,7 @@ func main() {
 					if isCommit {
 						lines = append(lines, printCommit(c, line, tagMap, branchMap))
 					} else {
+						/// TODO: can we not hardcode this?
 						lines = append(lines, fmt.Sprintf("%s%s", strings.Repeat(" ", 26), line))
 					}
 				}
@@ -163,7 +161,11 @@ func printCommit(c *object.Commit, graphLine string, tagMap map[string][]string,
 	tags, tagOk := tagMap[hash]
 	branches, branchOk := branchMap[hash]
 
-	line = fmt.Sprintf("%s %s %s %s", hash[:8], timestamp, graphLine, author)
+	line = fmt.Sprintf("%s %s %s %s",
+		lipgloss.NewStyle().Foreground(lipgloss.Color("5")).Render(hash[:8]),
+		lipgloss.NewStyle().Foreground(lipgloss.Color("4")).Render(timestamp),
+		graphLine,
+		lipgloss.NewStyle().Foreground(lipgloss.Color("3")).Render(author))
 	if tagOk || branchOk {
 		refLine := append(append(make([]string, 0, 2), tags[:]...), branches[:]...)
 		line += fmt.Sprintf(" (%s)", strings.Join(refLine, ", "))

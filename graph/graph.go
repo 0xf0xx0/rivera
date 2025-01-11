@@ -118,7 +118,7 @@ func (G *Graph) updateColumns() {
 
 	G.numColumns = G.numNewColumns
 	G.numNewColumns = 0
-	G.defaultColorIndex = 1
+	G.defaultColorIndex = 0
 
 	maxNewColumns = G.numColumns + G.numParents
 	G.ensureCapacity(maxNewColumns)
@@ -396,6 +396,7 @@ func (G *Graph) outputCommitLine(line *string) *string {
 	}
 	if G.numParents > 1 {
 		G.updateState(GRAPH_POST_MERGE)
+		*line += "p"
 	} else if G.isMappingCorrect() {
 		G.updateState(GRAPH_PADDING)
 	} else {
@@ -408,7 +409,7 @@ func (G *Graph) outputPostMergeLine(line *string) *string {
 	firstParent, _ := G.commit.Parent(0)
 	var parentColumn *Column
 
-	/// TODO: .edgesAdded is 1 here, when it should be 0
+	/// FIXME: .edgesAdded is 1 here, when it should be 0? maybe?
 	for i := 0; i <= G.numColumns; i++ {
 		column := G.columns[i]
 		var colCommit *object.Commit
@@ -434,6 +435,7 @@ func (G *Graph) outputPostMergeLine(line *string) *string {
 				}
 				//println(idx, parentColumnIdx)
 				mergeChar = mergeChars[idx]
+				*line += "e"
 				G.lineWriteColumn(line, G.newColumns[parentColumnIdx], mergeChar)
 				if idx == 2 {
 					if G.edgesAdded > 0 || ii < G.numParents-1 {
