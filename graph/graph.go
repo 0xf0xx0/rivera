@@ -20,12 +20,13 @@ const (
 	GRAPH_COLLAPSING
 )
 const (
-	GRAPH_PRINT_BRANCH_EXTENSION ="-"
-	GRAPH_PRINT_BRIDGE  = "_"
-	GRAPH_PRINT_PADDING = "|"
-	GRAPH_PRINT_COMMIT  = "*"
-	GRAPH_PRINT_RMOVE   = "\\"
-	GRAPH_PRINT_LMOVE   = "/"
+	GRAPH_PRINT_MULTIBRANCH_EXTENSION = "-"
+	GRAPH_PRINT_MULTIBRANCH_START     = "."
+	GRAPH_PRINT_BRIDGE                = "_"
+	GRAPH_PRINT_PADDING               = "|"
+	GRAPH_PRINT_COMMIT                = "*"
+	GRAPH_PRINT_RMOVE                 = "\\"
+	GRAPH_PRINT_LMOVE                 = "/"
 )
 
 var mergeChars = []string{GRAPH_PRINT_LMOVE, GRAPH_PRINT_PADDING, GRAPH_PRINT_RMOVE}
@@ -47,9 +48,6 @@ type Graph struct {
 	mappingSize, mergeLayout                          int
 }
 type GraphState int
-type GraphLine struct {
-	width int
-}
 
 func New() *Graph {
 	G := &Graph{}
@@ -72,7 +70,6 @@ func (G *Graph) IsCommitFinished() bool {
 func (G *Graph) NextLine() (string, bool) {
 	graphLine := "" //GraphLine{width: 0}
 	commitLine := false
-	// println(G.state)
 	switch G.state {
 	case GRAPH_PADDING:
 		G.outputPaddingLine(&graphLine)
@@ -289,11 +286,11 @@ func (G *Graph) drawOctopusMerge(line *string) {
 		j := G.mapping[(G.commitIndex+i+2)*2]
 		column := G.newColumns[j]
 
-		G.lineWriteColumn(line, column, GRAPH_PRINT_BRANCH_EXTENSION)
+		G.lineWriteColumn(line, column, GRAPH_PRINT_MULTIBRANCH_EXTENSION)
 		if i == dashedParents-1 {
-			G.lineWriteColumn(line, column, ".")
+			G.lineWriteColumn(line, column, GRAPH_PRINT_MULTIBRANCH_START)
 		} else {
-			G.lineWriteColumn(line, column, "-")
+			G.lineWriteColumn(line, column, GRAPH_PRINT_MULTIBRANCH_EXTENSION)
 		}
 	}
 }

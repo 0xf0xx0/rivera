@@ -42,10 +42,16 @@ func main() {
 				Usage: "display all branches",
 				Value: false,
 			},
+			&cli.BoolFlag{
+				Name:  "reverse",
+				Usage: "reverse the display",
+				Value: false,
+			},
 		},
 		Action: func(ctx *cli.Context) error {
 			repoPath := ctx.String("repository")
 			displayAll := ctx.Bool("all")
+			reverse := ctx.Bool("reverse")
 			repo, err := git.PlainOpen(repoPath)
 			if err != nil {
 				return err
@@ -102,28 +108,37 @@ func main() {
 				"#b00b69",
 				"#262638",
 			})
-			commits := make([]*object.Commit, 0, 64)
+			//commits := make([]*object.Commit, 0, 64)
+			lines := make([]string, 0, 64)
 			cIter.ForEach(func(c *object.Commit) error {
-				commits = append(commits, c)
-				return nil
-				//return fmt.Errorf("fuck")
-			})
-			commitLen := len(commits)
-			//for i := commitLen-1; i >= 0; i-- {
-			for i := 0; i < commitLen; i++ {
-				c := commits[i]
+				//commits = append(commits, c)
 				g.Update(c)
 				for {
 					if g.IsCommitFinished() {
 						break
 					}
 					line, isCommit := g.NextLine()
+					if reverse {
+						line = strings.ReplaceAll(line, "\\", "t")
+						line = strings.ReplaceAll(line, "/", "\\")
+						line = strings.ReplaceAll(line, "t", "/")
+					}
 					if isCommit {
-						printCommit(c, line, tagMap, branchMap)
+						lines = append(lines, printCommit(c, line, tagMap, branchMap))
 					} else {
-						println(strings.Repeat(" ", 25), line)
+						lines = append(lines, fmt.Sprintf("%s%s", strings.Repeat(" ", 26), line))
 					}
 				}
+				return nil
+			})
+			jInit := len(lines) - 1
+			if reverse {
+				for i, j := 0, jInit; i < j; i, j = i+1, j-1 {
+					lines[i], lines[j] = lines[j], lines[i]
+				}
+			}
+			for _, line := range lines {
+				fmt.Println(line)
 			}
 			return nil
 		},
@@ -139,7 +154,8 @@ func main() {
 	}
 }
 
-func printCommit(c *object.Commit, graphLine string, tagMap map[string][]string, branchMap map[string][]string) {
+func printCommit(c *object.Commit, graphLine string, tagMap map[string][]string, branchMap map[string][]string) string {
+	line := ""
 	hash := c.Hash.String()
 	timestamp := c.Author.When.Format("2006-01-02 15:04") /// literally what is this
 	author := c.Author.Name
@@ -147,11 +163,12 @@ func printCommit(c *object.Commit, graphLine string, tagMap map[string][]string,
 	tags, tagOk := tagMap[hash]
 	branches, branchOk := branchMap[hash]
 
-	fmt.Print(fmt.Sprintf("%s %s %s %s", hash[:8], timestamp, graphLine, author))
+	line = fmt.Sprintf("%s %s %s %s", hash[:8], timestamp, graphLine, author)
 	if tagOk || branchOk {
 		refLine := append(append(make([]string, 0, 2), tags[:]...), branches[:]...)
-		fmt.Print(fmt.Sprintf(" (%s)", strings.Join(refLine, ", ")))
+		line += fmt.Sprintf(" (%s)", strings.Join(refLine, ", "))
 	}
 
-	fmt.Println(fmt.Sprintf(" %s", summary))
+	line += fmt.Sprintf(" %s", summary)
+	return line
 }
