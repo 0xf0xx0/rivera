@@ -109,7 +109,6 @@ func (G *Graph) SetColors(colors []string) {
 	G.colors = colors
 }
 func (G *Graph) updateColumns() {
-	var maxNewColumns int
 	isCommitInColumns := false
 	/// SWAP()
 	tempCols := G.columns
@@ -118,9 +117,8 @@ func (G *Graph) updateColumns() {
 
 	G.numColumns = G.numNewColumns
 	G.numNewColumns = 0
-	G.defaultColorIndex = 0
 
-	maxNewColumns = G.numColumns + G.numParents
+	maxNewColumns := G.numColumns + G.numParents
 	G.ensureCapacity(maxNewColumns)
 	G.mappingSize = maxNewColumns * 2
 	for i := 0; i < G.mappingSize; i++ {

@@ -96,7 +96,7 @@ func main() {
 					branchMap[hash] = make([]string, 0, 1)
 				}
 				// println(hash, name)
-				branchMap[hash] = append(branchMap[hash], name)
+				branchMap[hash] = append(branchMap[hash], lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Render(name))
 				return nil
 			})
 
@@ -168,7 +168,7 @@ func printCommit(c *object.Commit, graphLine string, tagMap map[string][]string,
 		lipgloss.NewStyle().Foreground(lipgloss.Color("3")).Render(author))
 	if tagOk || branchOk {
 		refLine := append(append(make([]string, 0, 2), tags[:]...), branches[:]...)
-		line += fmt.Sprintf(" (%s)", strings.Join(refLine, ", "))
+		line += fmt.Sprintf(" (%s)", lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Render(strings.Join(refLine, ", ")))
 	}
 
 	line += fmt.Sprintf(" %s", summary)
