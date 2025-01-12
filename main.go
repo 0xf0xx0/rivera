@@ -38,6 +38,12 @@ func main() {
 				Aliases: []string{"repo", "r"},
 				Value:   ".",
 			},
+			&cli.IntFlag{
+				Name: "hashlength",
+				Usage: "`len`gth of the commit hash",
+				Aliases: []string{"l"},
+				Value: 8,
+			},
 			&cli.BoolFlag{
 				Name:  "all",
 				Usage: "display all branches",
@@ -53,6 +59,7 @@ func main() {
 			repoPath := ctx.String("repository")
 			displayAll := ctx.Bool("all")
 			reverse := ctx.Bool("reverse")
+			hashLen := ctx.Int("hashlength")
 			repo, err := git.PlainOpen(repoPath)
 			if err != nil {
 				return err
@@ -110,12 +117,16 @@ func main() {
 			lines := make([]string, 0, 64)
 			cIter.ForEach(func(c *object.Commit) error {
 				g.Update(c)
+				// if c.Hash.String()[:hashLen] != "2d0bcc71" {
+				// 	return nil
+				// }
 				for {
 					if g.IsCommitFinished() {
 						break
 					}
 					line, isCommit := g.NextLine()
 					if reverse {
+						/// TODO: do we have to do this? i think so lol
 						line = strings.ReplaceAll(line, "\\", "t")
 						line = strings.ReplaceAll(line, "/", "\\")
 						line = strings.ReplaceAll(line, "t", "/")
@@ -124,7 +135,7 @@ func main() {
 						lines = append(lines, printCommit(c, line, tagMap, branchMap))
 					} else {
 						/// TODO: can we not hardcode this?
-						lines = append(lines, fmt.Sprintf("%s%s", strings.Repeat(" ", 26), line))
+						lines = append(lines, fmt.Sprintf("%s%s", strings.Repeat(" ", 18+hashLen), line))
 					}
 				}
 				return nil
