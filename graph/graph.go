@@ -192,16 +192,19 @@ func (G *Graph) ensureCapacity(numColumns int) {
 
 	// reallocate
 	tempCols := G.columns
-	G.columns = make([]*Column, numColumns)
+	G.columns = make([]*Column, G.columnCapacity)
 	copy(G.columns, tempCols)
+
 	tempCols = G.newColumns
-	G.newColumns = make([]*Column, numColumns)
+	G.newColumns = make([]*Column, G.columnCapacity)
 	copy(G.newColumns, tempCols)
+
 	tempMap := G.mapping
-	G.mapping = make([]int, numColumns*2)
+	G.mapping = make([]int, G.columnCapacity*2)
 	copy(G.mapping, tempMap)
+
 	tempMap = G.oldMapping
-	G.oldMapping = make([]int, numColumns*2)
+	G.oldMapping = make([]int, G.columnCapacity*2)
 	copy(G.oldMapping, tempMap)
 }
 func (G *Graph) incrementColumnColor() {
