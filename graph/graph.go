@@ -235,9 +235,6 @@ func (G *Graph) insertIntoNewColumns(commit *object.Commit, idx int) {
 			color:  G.findCommitColor(commit),
 		}
 	}
-	if G.width > 2 {
-		println(G.edgesAdded, idx, i, G.mapping[G.width-2], i == G.mapping[G.width-2])
-	}
 	if G.numParents > 1 && idx > -1 && G.mergeLayout == -1 {
 		dist := idx - i
 		shift := 1
@@ -444,9 +441,7 @@ func (G *Graph) outputPostMergeLine(line *string) *string {
 				if parentColumnIdx < 0 {
 					panic("[parentColumn < 0]")
 				}
-				//println(idx, parentColumnIdx)
 				mergeChar = mergeChars[idx]
-				//*line += "e"
 				G.lineWriteColumn(line, G.newColumns[parentColumnIdx], mergeChar)
 				if idx == 2 {
 					if G.edgesAdded > 0 || ii < G.numParents-1 {
