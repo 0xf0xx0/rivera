@@ -153,7 +153,7 @@ func (G *Graph) updateColumns() {
 				if G.numParents > 1 || !isCommitInColumns {
 					G.incrementColumnColor()
 				}
-				G.insertIntoNewColumns(parent, parentIdx)
+				G.insertIntoNewColumns(parent, i)
 			}
 			if G.numParents == 0 {
 				G.width += 2
@@ -297,10 +297,6 @@ func (G *Graph) drawOctopusMerge(line *string) {
 	}
 }
 
-// / and heres where we diverge
-// / i want to hold the entire string in memory for formatting
-// / bitcoin/bitcoin (all branches) is 30026666 bytes
-// / git-foresta --all | wc
 func (G *Graph) padHorizontally(line *string) {
 	lineWidth := len(*line)
 	if lineWidth < G.width {
@@ -404,7 +400,6 @@ func (G *Graph) outputCommitLine(line *string) *string {
 	}
 	if G.numParents > 1 {
 		G.updateState(GRAPH_POST_MERGE)
-		*line += "p"
 	} else if G.isMappingCorrect() {
 		G.updateState(GRAPH_PADDING)
 	} else {

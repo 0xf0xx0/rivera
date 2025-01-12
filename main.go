@@ -111,9 +111,6 @@ func main() {
 			cIter.ForEach(func(c *object.Commit) error {
 				g.Update(c)
 				for {
-					if c.Hash.String()[:8] != "61bd6c53" {
-						break
-					}
 					if g.IsCommitFinished() {
 						break
 					}
