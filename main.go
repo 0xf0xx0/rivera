@@ -17,14 +17,6 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const (
-	graphSymbol_commit   = "c"
-	graphSymbol_merge    = "m"
-	graphSymbol_overpass = "o"
-	graphSymbol_root     = "r"
-	graphSymbol_tip      = "t"
-)
-
 var config = struct {
 	repoPath, branchcolors string
 	hashLen                int
@@ -72,6 +64,7 @@ func main() {
 			config.reverse = ctx.Bool("reverse")
 			config.hashLen = ctx.Int("hashlength")
 			config.branchcolors = ctx.String("branchcolors")
+
 			repo, err := git.PlainOpen(config.repoPath)
 			if err != nil {
 				return err
@@ -151,7 +144,7 @@ func main() {
 				return nil
 			})
 			if config.reverse {
-				for i := len(lines)-1; i > -1; i-- {
+				for i := len(lines) - 1; i > -1; i-- {
 					line := lines[i]
 					fmt.Println(line)
 				}
