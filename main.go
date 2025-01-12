@@ -25,6 +25,12 @@ const (
 	graphSymbol_tip      = "t"
 )
 
+var config = struct {
+	repoPath, branchcolors string
+	hashLen                int
+	reverse, displayAll    bool
+}{}
+
 func main() {
 	app := &cli.App{
 		Name:                   "rivera",
@@ -39,10 +45,10 @@ func main() {
 				Value:   ".",
 			},
 			&cli.IntFlag{
-				Name: "hashlength",
-				Usage: "`len`gth of the commit hash",
+				Name:    "hashlength",
+				Usage:   "`len`gth of the commit hash",
 				Aliases: []string{"l"},
-				Value: 8,
+				Value:   8,
 			},
 			&cli.BoolFlag{
 				Name:  "all",
@@ -54,13 +60,19 @@ func main() {
 				Usage: "reverse the display",
 				Value: false,
 			},
+			&cli.StringFlag{
+				Name:  "branchcolors",
+				Usage: "comma separated `color[,color]` used for branches, passed straight to lipgloss.Color",
+				Value: "#7272A8,#ff00ff,#b00b69",
+			},
 		},
 		Action: func(ctx *cli.Context) error {
-			repoPath := ctx.String("repository")
-			displayAll := ctx.Bool("all")
-			reverse := ctx.Bool("reverse")
-			hashLen := ctx.Int("hashlength")
-			repo, err := git.PlainOpen(repoPath)
+			config.repoPath = ctx.String("repository")
+			config.displayAll = ctx.Bool("all")
+			config.reverse = ctx.Bool("reverse")
+			config.hashLen = ctx.Int("hashlength")
+			config.branchcolors = ctx.String("branchcolors")
+			repo, err := git.PlainOpen(config.repoPath)
 			if err != nil {
 				return err
 			}
@@ -68,7 +80,12 @@ func main() {
 			if err != nil {
 				return err
 			}
-			cIter, err := repo.Log(&git.LogOptions{From: head.Hash(), Order: git.LogOrderCommitterTime, All: displayAll})
+
+			cIter, err := repo.Log(&git.LogOptions{
+				From:  head.Hash(),
+				Order: git.LogOrderCommitterTime, // not certain this works :\
+				All:   config.displayAll,
+			})
 			if err != nil {
 				return err
 			}
@@ -109,45 +126,39 @@ func main() {
 
 			/// now, we build the river
 			g := graph.New()
-			g.SetColors([]string{
-				"#ff00ff",
-				"#b00b69",
-				"#7272A8",
-			})
+			g.SetColors(config.branchcolors)
 			lines := make([]string, 0, 64)
 			cIter.ForEach(func(c *object.Commit) error {
 				g.Update(c)
-				// if c.Hash.String()[:hashLen] != "2d0bcc71" {
-				// 	return nil
-				// }
 				for {
 					if g.IsCommitFinished() {
 						break
 					}
 					line, isCommit := g.NextLine()
-					if reverse {
+					if config.reverse {
 						/// TODO: do we have to do this? i think so lol
 						line = strings.ReplaceAll(line, "\\", "t")
 						line = strings.ReplaceAll(line, "/", "\\")
 						line = strings.ReplaceAll(line, "t", "/")
 					}
 					if isCommit {
-						lines = append(lines, printCommit(c, line, tagMap, branchMap))
+						lines = append(lines, printCommit(c, line, tagMap, branchMap, head.Hash().String() == c.Hash.String()))
 					} else {
 						/// TODO: can we not hardcode this?
-						lines = append(lines, fmt.Sprintf("%s%s", strings.Repeat(" ", 18+hashLen), line))
+						lines = append(lines, fmt.Sprintf("%s%s", strings.Repeat(" ", 18+config.hashLen), line))
 					}
 				}
 				return nil
 			})
-			jInit := len(lines) - 1
-			if reverse {
-				for i, j := 0, jInit; i < j; i, j = i+1, j-1 {
-					lines[i], lines[j] = lines[j], lines[i]
+			if config.reverse {
+				for i := len(lines)-1; i > -1; i-- {
+					line := lines[i]
+					fmt.Println(line)
 				}
-			}
-			for _, line := range lines {
-				fmt.Println(line)
+			} else {
+				for _, line := range lines {
+					fmt.Println(line)
+				}
 			}
 			return nil
 		},
@@ -163,7 +174,10 @@ func main() {
 	}
 }
 
-func printCommit(c *object.Commit, graphLine string, tagMap map[string][]string, branchMap map[string][]string) string {
+func colorize(text, color string) string {
+	return lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Render(text)
+}
+func printCommit(c *object.Commit, graphLine string, tagMap, branchMap map[string][]string, isHead bool) string {
 	line := ""
 	hash := c.Hash.String()
 	timestamp := c.Author.When.Format("2006-01-02 15:04") /// literally what is this
@@ -173,13 +187,21 @@ func printCommit(c *object.Commit, graphLine string, tagMap map[string][]string,
 	branches, branchOk := branchMap[hash]
 
 	line = fmt.Sprintf("%s %s %s %s",
-		lipgloss.NewStyle().Foreground(lipgloss.Color("5")).Render(hash[:8]),
+		colorize(hash[:config.hashLen], "5"),
 		lipgloss.NewStyle().Foreground(lipgloss.Color("4")).Render(timestamp),
 		graphLine,
 		lipgloss.NewStyle().Foreground(lipgloss.Color("3")).Render(author))
-	if tagOk || branchOk {
+	if isHead || tagOk || branchOk {
+		line += colorize(" (", "5")
+		if isHead {
+			line += colorize("HEAD %", "6")
+			if tagOk || branchOk {
+				line += " "
+			}
+		}
 		refLine := append(append(make([]string, 0, 2), tags[:]...), branches[:]...)
-		line += fmt.Sprintf(" (%s)", lipgloss.NewStyle().Foreground(lipgloss.Color("2")).Render(strings.Join(refLine, ", ")))
+		line += fmt.Sprintf("%s", strings.Join(refLine, ", "))
+		line += colorize(")", "5")
 	}
 
 	line += fmt.Sprintf(" %s", summary)

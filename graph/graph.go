@@ -105,8 +105,17 @@ func (G *Graph) Update(commit *object.Commit) {
 		G.state = GRAPH_COMMIT
 	}
 }
-func (G *Graph) SetColors(colors []string) {
+
+// / comma separated colors
+func (G *Graph) SetColors(colorstring string) {
+	colors := strings.Split(colorstring, ",")
+	for _, color := range colors {
+		color = strings.Trim(color, " ")
+	}
 	G.maxColorIndex = len(colors) - 1
+	if G.maxColorIndex < 1 {
+		panic("too few colors, need 2 minimum")
+	}
 	G.colors = colors
 }
 func (G *Graph) updateColumns() {
