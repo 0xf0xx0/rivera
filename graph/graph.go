@@ -54,7 +54,7 @@ func New() *Graph {
 	G.commit = nil
 	G.state = GRAPH_PADDING
 	G.prevState = GRAPH_PADDING
-	G.defaultColorIndex = G.maxColorIndex
+	G.defaultColorIndex = G.maxColorIndex - 1
 
 	G.columnCapacity = 30
 	G.columns = make([]*Column, G.columnCapacity)
@@ -85,6 +85,7 @@ func (G *Graph) NextLine() (string, bool) {
 	case GRAPH_COLLAPSING:
 		G.outputCollapsingLine(&graphLine)
 	}
+	G.padHorizontally(&graphLine)
 	return graphLine, commitLine
 }
 func (G *Graph) Update(commit *object.Commit) {
@@ -105,7 +106,7 @@ func (G *Graph) Update(commit *object.Commit) {
 	}
 }
 func (G *Graph) SetColors(colors []string) {
-	G.maxColorIndex = len(colors)
+	G.maxColorIndex = len(colors) - 1
 	G.colors = colors
 }
 func (G *Graph) updateColumns() {
@@ -234,6 +235,9 @@ func (G *Graph) insertIntoNewColumns(commit *object.Commit, idx int) {
 			color:  G.findCommitColor(commit),
 		}
 	}
+	if G.width > 2 {
+		println(G.edgesAdded, idx, i, G.mapping[G.width-2], i == G.mapping[G.width-2])
+	}
 	if G.numParents > 1 && idx > -1 && G.mergeLayout == -1 {
 		dist := idx - i
 		shift := 1
@@ -300,6 +304,12 @@ func (G *Graph) drawOctopusMerge(line *string) {
 // / i want to hold the entire string in memory for formatting
 // / bitcoin/bitcoin (all branches) is 30026666 bytes
 // / git-foresta --all | wc
+func (G *Graph) padHorizontally(line *string) {
+	lineWidth := len(*line)
+	if lineWidth < G.width {
+		*line += strings.Repeat(" ", G.width-lineWidth)
+	}
+}
 func (G *Graph) lineWriteColumn(line *string, column *Column, char string) {
 	// if column.color < G.maxColorIndex {
 	// 	*line += (string)(lipgloss.Color(G.colors[column.color]))
@@ -436,7 +446,7 @@ func (G *Graph) outputPostMergeLine(line *string) *string {
 				}
 				//println(idx, parentColumnIdx)
 				mergeChar = mergeChars[idx]
-				*line += "e"
+				//*line += "e"
 				G.lineWriteColumn(line, G.newColumns[parentColumnIdx], mergeChar)
 				if idx == 2 {
 					if G.edgesAdded > 0 || ii < G.numParents-1 {
