@@ -54,7 +54,7 @@ func New() *Graph {
 	G.commit = nil
 	G.state = GRAPH_PADDING
 	G.prevState = GRAPH_PADDING
-	G.defaultColorIndex = G.maxColorIndex - 1
+	G.defaultColorIndex = G.maxColorIndex
 
 	G.columnCapacity = 30
 	G.columns = make([]*Column, G.columnCapacity)

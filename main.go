@@ -55,7 +55,7 @@ func main() {
 			&cli.StringFlag{
 				Name:  "branchcolors",
 				Usage: "comma separated `color[,color]` used for branches, passed straight to lipgloss.Color",
-				Value: "#7272A8,#ff00ff,#b00b69",
+				Value: "#7272A8, #ff00ff, #b00b69, #e5ebb7, #11bf7b",
 			},
 		},
 		Action: func(ctx *cli.Context) error {
