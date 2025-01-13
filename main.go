@@ -103,7 +103,7 @@ func main() {
 				if _, ok := tagMap[hash]; !ok {
 					tagMap[hash] = make([]string, 0, 1)
 				}
-				tagMap[hash] = append(tagMap[hash], tag.Name)
+				tagMap[hash] = append(tagMap[hash], colorize("tag: ", "5") + colorize(tag.Name, "3"))
 				return nil
 			})
 			branches.ForEach(func(branchRef *plumbing.Reference) error {
@@ -113,7 +113,7 @@ func main() {
 					branchMap[hash] = make([]string, 0, 1)
 				}
 				// println(hash, name)
-				branchMap[hash] = append(branchMap[hash], lipgloss.NewStyle().Foreground(lipgloss.Color("1")).Render(name))
+				branchMap[hash] = append(branchMap[hash], colorize(name, "1"))
 				return nil
 			})
 
@@ -181,11 +181,11 @@ func printCommit(c *object.Commit, graphLine string, tagMap, branchMap map[strin
 
 	line = fmt.Sprintf("%s %s %s %s",
 		colorize(hash[:config.hashLen], "5"),
-		lipgloss.NewStyle().Foreground(lipgloss.Color("4")).Render(timestamp),
+		colorize(timestamp, "4"),
 		graphLine,
-		lipgloss.NewStyle().Foreground(lipgloss.Color("3")).Render(author))
+		colorize(author, "3"))
 	if isHead || tagOk || branchOk {
-		line += colorize(" (", "5")
+		line += colorize(" (", "4")
 		if isHead {
 			line += colorize("HEAD %", "6")
 			if tagOk || branchOk {
@@ -194,7 +194,7 @@ func printCommit(c *object.Commit, graphLine string, tagMap, branchMap map[strin
 		}
 		refLine := append(append(make([]string, 0, 2), tags[:]...), branches[:]...)
 		line += fmt.Sprintf("%s", strings.Join(refLine, ", "))
-		line += colorize(")", "5")
+		line += colorize(")", "4")
 	}
 
 	line += fmt.Sprintf(" %s", summary)

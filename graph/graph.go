@@ -388,7 +388,12 @@ func (G *Graph) outputCommitLine(line *string) *string {
 
 		if commit.Hash.String() == G.commit.Hash.String() {
 			seenThis = true
-			*line += GRAPH_PRINT_COMMIT
+			/// deviation: marking the root commit
+			if G.numParents == 0 {
+				*line += "R"
+			} else {
+				*line += GRAPH_PRINT_COMMIT
+			}
 			if G.numParents > 2 {
 				G.drawOctopusMerge(line)
 			}
