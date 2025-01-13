@@ -112,8 +112,8 @@ func (G *Graph) SetColors(colorstring string) {
 	for _, color := range colors {
 		color = strings.Trim(color, " ")
 	}
-	G.maxColorIndex = len(colors) - 1
-	if G.maxColorIndex < 1 {
+	G.maxColorIndex = len(colors)
+	if G.maxColorIndex < 2 {
 		panic("too few colors, need 2 minimum")
 	}
 	G.colors = colors
