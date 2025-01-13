@@ -76,13 +76,13 @@ func main() {
 
 			cIter, err := repo.Log(&git.LogOptions{
 				From:  head.Hash(),
-				Order: git.LogOrderCommitterTime, // not certain this works :\
+				Order: git.LogOrderCommitterTime, /// not certain this works :\
 				All:   config.displayAll,
 			})
 			if err != nil {
 				return err
 			}
-			tags, err := repo.TagObjects()
+			tags, err := repo.Tags()
 			if err != nil {
 				return err
 			}
@@ -98,21 +98,20 @@ func main() {
 
 			tagMap := make(map[string][]string)
 			branchMap := make(map[string][]string)
-			tags.ForEach(func(tag *object.Tag) error {
-				hash := tag.Target.String()
+			tags.ForEach(func(tag *plumbing.Reference) error {
+				hash := tag.Hash().String()
 				if _, ok := tagMap[hash]; !ok {
-					tagMap[hash] = make([]string, 0, 1)
+					tagMap[hash] = make([]string, 0, 4)
 				}
-				tagMap[hash] = append(tagMap[hash], colorize("tag: ", "5") + colorize(tag.Name, "3"))
+				tagMap[hash] = append(tagMap[hash], colorize("tag: ", "5") + colorize(tag.Name().Short(), "3"))
 				return nil
 			})
 			branches.ForEach(func(branchRef *plumbing.Reference) error {
 				hash := branchRef.Hash().String()
 				name := branchRef.Name().Short()
 				if _, ok := branchMap[hash]; !ok {
-					branchMap[hash] = make([]string, 0, 1)
+					branchMap[hash] = make([]string, 0, 4)
 				}
-				// println(hash, name)
 				branchMap[hash] = append(branchMap[hash], colorize(name, "1"))
 				return nil
 			})
@@ -173,8 +172,8 @@ func colorize(text, color string) string {
 func printCommit(c *object.Commit, graphLine string, tagMap, branchMap map[string][]string, isHead bool) string {
 	line := ""
 	hash := c.Hash.String()
-	timestamp := c.Author.When.Format("2006-01-02 15:04") /// literally what is this
-	author := c.Author.Name
+	timestamp := c.Committer.When.Format("2006-01-02 15:04") /// literally what is this
+	author := c.Committer.Name
 	summary := strings.Split(c.Message, "\n")[0]
 	tags, tagOk := tagMap[hash]
 	branches, branchOk := branchMap[hash]
