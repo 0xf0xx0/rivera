@@ -313,13 +313,6 @@ func (G *Graph) padHorizontally(line *string) {
 	}
 }
 func (G *Graph) lineWriteColumn(line *string, column *Column, char string) {
-	// if column.color < G.maxColorIndex {
-	// 	*line += (string)(lipgloss.Color(G.colors[column.color]))
-	// }
-	// *line += char
-	// if column.color < G.maxColorIndex {
-	// 	*line += (string)(lipgloss.Color(G.colors[G.maxColorIndex-1]))
-	// }
 	*line += lipgloss.NewStyle().Foreground(lipgloss.Color(G.colors[column.color])).Render(char)
 }
 func (G *Graph) outputPaddingLine(line *string) *string {

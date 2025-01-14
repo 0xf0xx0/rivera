@@ -130,10 +130,12 @@ func main() {
 					line, isCommit := g.NextLine()
 					if config.reverse {
 						/// TODO: do we have to do this? i think so lol
-						line = strings.ReplaceAll(line, "\\", "t")
-						line = strings.ReplaceAll(line, "/", "\\")
-						line = strings.ReplaceAll(line, "t", "/")
+						line = strings.ReplaceAll(line, graph.GRAPH_PRINT_RMOVE, "t")
+						line = strings.ReplaceAll(line, graph.GRAPH_PRINT_LMOVE, graph.GRAPH_PRINT_RMOVE)
+						line = strings.ReplaceAll(line, "t", graph.GRAPH_PRINT_LMOVE)
+						line = strings.ReplaceAll(line, graph.GRAPH_PRINT_BRIDGE, "‾")
 					}
+
 					if isCommit {
 						lines = append(lines, printCommit(c, line, tagMap, branchMap, head.Hash().String() == c.Hash.String()))
 					} else {
