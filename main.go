@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"slices"
 	"strings"
 	"syscall"
 
@@ -119,8 +120,17 @@ func main() {
 			/// now, we build the river
 			g := graph.New()
 			g.SetColors(config.branchcolors)
+			commits := make([]object.Commit, 0, 64)
 			lines := make([]string, 0, 64)
 			cIter.ForEach(func(c *object.Commit) error {
+				commits = append(commits, *c)
+				return nil
+			})
+
+			slices.SortStableFunc(lines, func(a, b E) int {
+
+			})
+			for _, c := range commits {
 				g.Update(c)
 				for {
 					if g.IsCommitFinished() {
@@ -140,8 +150,7 @@ func main() {
 						lines = append(lines, fmt.Sprintf("%s%s", strings.Repeat(" ", 18+config.hashLen), line))
 					}
 				}
-				return nil
-			})
+			}
 			if config.reverse {
 				for i := len(lines) - 1; i > -1; i-- {
 					line := lines[i]
