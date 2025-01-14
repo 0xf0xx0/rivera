@@ -79,11 +79,11 @@ func main() {
 			headCommit, _ := nodeIndex.Get(head.Hash())
 
 			iter := commitgraph.NewCommitNodeIterTopoOrder(headCommit, nil, nil)
-			cIter, err := repo.Log(&git.LogOptions{
-				From:  head.Hash(),
-				Order: git.LogOrderCommitterTime, /// not certain this works :\
-				All:   config.displayAll,
-			})
+			// cIter, err := repo.Log(&git.LogOptions{
+			// 	From:  head.Hash(),
+			// 	Order: git.LogOrderCommitterTime, /// not certain this works :\
+			// 	All:   config.displayAll,
+			// })
 			// if err != nil {
 			// 	return err
 			// }
