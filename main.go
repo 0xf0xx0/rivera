@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 	"os/signal"
-	"slices"
 	"strings"
 	"syscall"
 
@@ -15,6 +14,7 @@ import (
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
+	"github.com/go-git/go-git/v5/plumbing/object/commitgraph"
 	"github.com/urfave/cli/v2"
 )
 
@@ -43,11 +43,11 @@ func main() {
 				Aliases: []string{"l"},
 				Value:   8,
 			},
-			&cli.BoolFlag{
-				Name:  "all",
-				Usage: "display all branches",
-				Value: false,
-			},
+			// &cli.BoolFlag{
+			// 	Name:  "all",
+			// 	Usage: "display all branches",
+			// 	Value: false,
+			// },
 			&cli.BoolFlag{
 				Name:  "reverse",
 				Usage: "reverse the display",
@@ -70,19 +70,23 @@ func main() {
 			if err != nil {
 				return err
 			}
+			nodeIndex := commitgraph.NewObjectCommitNodeIndex(repo.Storer)
+
 			head, err := repo.Head()
 			if err != nil {
 				return err
 			}
+			headCommit, _ := nodeIndex.Get(head.Hash())
 
+			iter := commitgraph.NewCommitNodeIterTopoOrder(headCommit, nil, nil)
 			cIter, err := repo.Log(&git.LogOptions{
 				From:  head.Hash(),
 				Order: git.LogOrderCommitterTime, /// not certain this works :\
 				All:   config.displayAll,
 			})
-			if err != nil {
-				return err
-			}
+			// if err != nil {
+			// 	return err
+			// }
 			tags, err := repo.Tags()
 			if err != nil {
 				return err
@@ -120,17 +124,9 @@ func main() {
 			/// now, we build the river
 			g := graph.New()
 			g.SetColors(config.branchcolors)
-			commits := make([]object.Commit, 0, 64)
 			lines := make([]string, 0, 64)
-			cIter.ForEach(func(c *object.Commit) error {
-				commits = append(commits, *c)
-				return nil
-			})
-
-			slices.SortStableFunc(lines, func(a, b E) int {
-
-			})
-			for _, c := range commits {
+			iter.ForEach(func(cn commitgraph.CommitNode) error {
+				c, _ := cn.Commit()
 				g.Update(c)
 				for {
 					if g.IsCommitFinished() {
@@ -150,7 +146,8 @@ func main() {
 						lines = append(lines, fmt.Sprintf("%s%s", strings.Repeat(" ", 18+config.hashLen), line))
 					}
 				}
-			}
+				return nil
+			})
 			if config.reverse {
 				for i := len(lines) - 1; i > -1; i-- {
 					line := lines[i]
