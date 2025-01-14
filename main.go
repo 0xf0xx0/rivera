@@ -79,7 +79,8 @@ func main() {
 			headCommit, _ := nodeIndex.Get(head.Hash())
 
 			iter := commitgraph.NewCommitNodeIterTopoOrder(headCommit, nil, nil)
-			// cIter, err := repo.Log(&git.LogOptions{
+			defer iter.Close()
+			// iter, err := repo.Log(&git.LogOptions{
 			// 	From:  head.Hash(),
 			// 	Order: git.LogOrderCommitterTime, /// not certain this works :\
 			// 	All:   config.displayAll,
@@ -87,37 +88,31 @@ func main() {
 			// if err != nil {
 			// 	return err
 			// }
-			tags, err := repo.Tags()
-			if err != nil {
-				return err
-			}
-			branches, err := repo.Branches()
-			if err != nil {
-				return err
-			}
-			/// todo: cant get remote branches
-			// remotes, err := repo.Remotes()
-			// if err != nil {
-			// 	return err
-			// }
+			refs, _ := repo.References()
+			defer refs.Close()
 
 			tagMap := make(map[string][]string)
 			branchMap := make(map[string][]string)
-			tags.ForEach(func(tag *plumbing.Reference) error {
-				hash := tag.Hash().String()
-				if _, ok := tagMap[hash]; !ok {
-					tagMap[hash] = make([]string, 0, 4)
+			refs.ForEach(func(ref *plumbing.Reference) error {
+				switch ref.Type() {
+				case plumbing.HashReference:
+					{
+						hash := ref.Hash().String()
+						name := ref.Name()
+						if (name.IsTag()) {
+							if _, ok := tagMap[hash]; !ok {
+								tagMap[hash] = make([]string, 0, 4)
+							}
+							tagMap[hash] = append(tagMap[hash], colorize("tag: ", "5")+colorize(name.Short(), "3"))
+						}
+						if name.IsRemote() || name.IsBranch() {
+							if _, ok := branchMap[hash]; !ok {
+								branchMap[hash] = make([]string, 0, 4)
+							}
+							branchMap[hash] = append(branchMap[hash], colorize(name.Short(), "1"))
+						}
+					}
 				}
-				tagMap[hash] = append(tagMap[hash], colorize("tag: ", "5") + colorize(tag.Name().Short(), "3"))
-				return nil
-			})
-			branches.ForEach(func(branchRef *plumbing.Reference) error {
-				hash := branchRef.Hash().String()
-				name := branchRef.Name().Short()
-				if _, ok := branchMap[hash]; !ok {
-					branchMap[hash] = make([]string, 0, 4)
-				}
-				branchMap[hash] = append(branchMap[hash], colorize(name, "1"))
 				return nil
 			})
 
