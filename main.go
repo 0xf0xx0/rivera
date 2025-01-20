@@ -9,8 +9,8 @@ import (
 	"syscall"
 
 	"rivera/graph"
+	"rivera/shared"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -49,6 +49,11 @@ func main() {
 			// 	Value: false,
 			// },
 			&cli.BoolFlag{
+				Name: "force-color",
+				Usage: "force color output (useful for piping)",
+				Value: false,
+			},
+			&cli.BoolFlag{
 				Name:  "reverse",
 				Usage: "reverse the display",
 				Value: false,
@@ -56,10 +61,13 @@ func main() {
 			&cli.StringFlag{
 				Name:  "branchcolors",
 				Usage: "comma separated `color,color[,color]` used for branches, passed straight to lipgloss.Color",
-				Value: "#7272A8, #ff00ff, #b00b69, #e5ebb7, #11bf7b",
+				Value: "1,3,4,6,9",//"#7272A8, #ff00ff, #b00b69, #e5ebb7, #11bf7b",
 			},
 		},
 		Action: func(ctx *cli.Context) error {
+			if (ctx.Bool("force-color")) {
+				os.Setenv("CLICOLOR_FORCE", "true")
+			}
 			config.repoPath = ctx.String("repository")
 			config.displayAll = ctx.Bool("all")
 			config.reverse = ctx.Bool("reverse")
@@ -70,24 +78,27 @@ func main() {
 			if err != nil {
 				return err
 			}
-			nodeIndex := commitgraph.NewObjectCommitNodeIndex(repo.Storer)
 
 			head, err := repo.Head()
 			if err != nil {
 				return err
 			}
-			headCommit, _ := nodeIndex.Get(head.Hash())
 
+			/// TODO: readd --all
+			/// how?
+			nodeIndex := commitgraph.NewObjectCommitNodeIndex(repo.Storer)
+			headCommit, _ := nodeIndex.Get(head.Hash())
 			iter := commitgraph.NewCommitNodeIterTopoOrder(headCommit, nil, nil)
-			defer iter.Close()
+
 			// iter, err := repo.Log(&git.LogOptions{
 			// 	From:  head.Hash(),
 			// 	Order: git.LogOrderCommitterTime, /// not certain this works :\
 			// 	All:   config.displayAll,
 			// })
-			// if err != nil {
-			// 	return err
-			// }
+			if err != nil {
+				return err
+			}
+			defer iter.Close()
 			refs, _ := repo.References()
 			defer refs.Close()
 
@@ -103,13 +114,17 @@ func main() {
 							if _, ok := tagMap[hash]; !ok {
 								tagMap[hash] = make([]string, 0, 4)
 							}
-							tagMap[hash] = append(tagMap[hash], colorize("tag: ", "5")+colorize(name.Short(), "3"))
+							tagMap[hash] = append(tagMap[hash], shared.Colorize("tag: ", "5")+shared.Colorize(name.Short(), "3"))
 						}
 						if name.IsRemote() || name.IsBranch() {
 							if _, ok := branchMap[hash]; !ok {
 								branchMap[hash] = make([]string, 0, 4)
 							}
-							branchMap[hash] = append(branchMap[hash], colorize(name.Short(), "1"))
+							if name.IsRemote() {
+								branchMap[hash] = append(branchMap[hash], shared.Colorize(name.Short(), "1"))
+							} else {
+								branchMap[hash] = append(branchMap[hash], shared.Colorize(name.Short(), "2"))
+							}
 						}
 					}
 				}
@@ -120,6 +135,7 @@ func main() {
 			g := graph.New()
 			g.SetColors(config.branchcolors)
 			lines := make([]string, 0, 64)
+			// iter.ForEach(func(c *object.Commit) error {
 			iter.ForEach(func(cn commitgraph.CommitNode) error {
 				c, _ := cn.Commit()
 				g.Update(c)
@@ -130,17 +146,17 @@ func main() {
 					line, isCommit := g.NextLine()
 					if config.reverse {
 						/// TODO: do we have to do this? i think so lol
-						line = strings.ReplaceAll(line, graph.GRAPH_PRINT_RMOVE, "t")
-						line = strings.ReplaceAll(line, graph.GRAPH_PRINT_LMOVE, graph.GRAPH_PRINT_RMOVE)
-						line = strings.ReplaceAll(line, "t", graph.GRAPH_PRINT_LMOVE)
-						line = strings.ReplaceAll(line, graph.GRAPH_PRINT_BRIDGE, "‾")
+						line = strings.ReplaceAll(line, graph.PRINT_RMOVE, "t")
+						line = strings.ReplaceAll(line, graph.PRINT_LMOVE, graph.PRINT_RMOVE)
+						line = strings.ReplaceAll(line, "t", graph.PRINT_LMOVE)
+						line = strings.ReplaceAll(line, graph.PRINT_BRIDGE, "‾")
 					}
 
 					if isCommit {
 						lines = append(lines, printCommit(c, line, tagMap, branchMap, head.Hash().String() == c.Hash.String()))
 					} else {
 						/// TODO: can we not hardcode this?
-						lines = append(lines, fmt.Sprintf("%s%s", strings.Repeat(" ", 18+config.hashLen), line))
+						lines = append(lines, fmt.Sprintf("%s%s", strings.Repeat(" ", 19+config.hashLen), line))
 					}
 				}
 				return nil
@@ -168,10 +184,6 @@ func main() {
 		log.Fatal(err)
 	}
 }
-
-func colorize(text, color string) string {
-	return lipgloss.NewStyle().Foreground(lipgloss.Color(color)).Render(text)
-}
 func printCommit(c *object.Commit, graphLine string, tagMap, branchMap map[string][]string, isHead bool) string {
 	line := ""
 	hash := c.Hash.String()
@@ -181,24 +193,26 @@ func printCommit(c *object.Commit, graphLine string, tagMap, branchMap map[strin
 	tags, tagOk := tagMap[hash]
 	branches, branchOk := branchMap[hash]
 
-	line = fmt.Sprintf("%s %s %s %s",
-		colorize(hash[:config.hashLen], "5"),
-		colorize(timestamp, "4"),
+	line = fmt.Sprintf("%s %s  %s%s",
+		shared.Colorize(hash[:config.hashLen], "5"),
+		shared.Colorize(timestamp, "4"),
 		graphLine,
-		colorize(author, "3"))
+		shared.Colorize(author, "3"))
 	if isHead || tagOk || branchOk {
-		line += colorize(" (", "4")
+		line += shared.Colorize(" (", "4")
 		if isHead {
-			line += colorize("HEAD %", "6")
+			line += shared.Colorize("HEAD %", "6")
 			if tagOk || branchOk {
 				line += " "
 			}
 		}
 		refLine := append(append(make([]string, 0, 2), tags[:]...), branches[:]...)
-		line += fmt.Sprintf("%s", strings.Join(refLine, ", "))
-		line += colorize(")", "4")
+		line += fmt.Sprintf("%s", strings.Join(refLine, shared.Colorize(",", "4")+" "))
+		line += shared.Colorize(")", "4")
 	}
 
+	/// how to get term width?
+	// lineLength := lipgloss.Width(line)
 	line += fmt.Sprintf(" %s", summary)
 	return line
 }

@@ -1,9 +1,9 @@
 package graph
 
 import (
+	"rivera/shared"
 	"strings"
 
-	"github.com/charmbracelet/lipgloss"
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
@@ -12,24 +12,26 @@ import (
 /// see it for detailed docs, this is just rough and dirty
 
 const (
-	GRAPH_PADDING = iota
-	GRAPH_SKIP
-	GRAPH_PRE_COMMIT
-	GRAPH_COMMIT
-	GRAPH_POST_MERGE
-	GRAPH_COLLAPSING
+	STATE_PADDING = iota
+	STATE_SKIP
+	STATE_PRE_COMMIT
+	STATE_COMMIT
+	STATE_POST_MERGE
+	STATE_COLLAPSING
 )
 const (
-	GRAPH_PRINT_MULTIBRANCH_EXTENSION = "-"
-	GRAPH_PRINT_MULTIBRANCH_START     = "."
-	GRAPH_PRINT_BRIDGE                = "_"
-	GRAPH_PRINT_PADDING               = "|"
-	GRAPH_PRINT_COMMIT                = "*"
-	GRAPH_PRINT_RMOVE                 = "\\"
-	GRAPH_PRINT_LMOVE                 = "/"
+	PRINT_MULTIBRANCH_EXTENSION = "-"
+	PRINT_MULTIBRANCH_START     = "."
+	PRINT_BRIDGE                = "_"
+	PRINT_PADDING               = "|"
+	PRINT_COMMIT                = "*"
+	PRINT_RMOVE                 = "\\"
+	PRINT_LMOVE                 = "/"
+	PRINT_TIP                   = "T"
+	PRINT_ROOT                  = "R"
 )
 
-var mergeChars = []string{GRAPH_PRINT_LMOVE, GRAPH_PRINT_PADDING, GRAPH_PRINT_RMOVE}
+var mergeChars = []string{PRINT_LMOVE, PRINT_PADDING, PRINT_RMOVE}
 
 type Graph struct {
 	commit           *object.Commit
@@ -52,8 +54,8 @@ type GraphState int
 func New() *Graph {
 	G := &Graph{}
 	G.commit = nil
-	G.state = GRAPH_PADDING
-	G.prevState = GRAPH_PADDING
+	G.state = STATE_PADDING
+	G.prevState = STATE_PADDING
 	G.defaultColorIndex = G.maxColorIndex
 
 	G.columnCapacity = 30
@@ -65,24 +67,24 @@ func New() *Graph {
 	return G
 }
 func (G *Graph) IsCommitFinished() bool {
-	return G.state == GRAPH_PADDING
+	return G.state == STATE_PADDING
 }
 func (G *Graph) NextLine() (string, bool) {
 	graphLine := "" //GraphLine{width: 0}
 	commitLine := false
 	switch G.state {
-	case GRAPH_PADDING:
+	case STATE_PADDING:
 		G.outputPaddingLine(&graphLine)
-	case GRAPH_SKIP:
+	case STATE_SKIP:
 		G.outputSkipLine(&graphLine)
-	case GRAPH_PRE_COMMIT:
+	case STATE_PRE_COMMIT:
 		G.outputPreCommitLine(&graphLine)
-	case GRAPH_COMMIT:
+	case STATE_COMMIT:
 		G.outputCommitLine(&graphLine)
 		commitLine = true
-	case GRAPH_POST_MERGE:
+	case STATE_POST_MERGE:
 		G.outputPostMergeLine(&graphLine)
-	case GRAPH_COLLAPSING:
+	case STATE_COLLAPSING:
 		G.outputCollapsingLine(&graphLine)
 	}
 	G.padHorizontally(&graphLine)
@@ -97,12 +99,12 @@ func (G *Graph) Update(commit *object.Commit) {
 	G.updateColumns()
 
 	G.expansionRow = 0
-	if G.state != GRAPH_PADDING {
-		G.state = GRAPH_SKIP
+	if G.state != STATE_PADDING {
+		G.state = STATE_SKIP
 	} else if G.needsPreCommitLine() {
-		G.state = GRAPH_PRE_COMMIT
+		G.state = STATE_PRE_COMMIT
 	} else {
-		G.state = GRAPH_COMMIT
+		G.state = STATE_COMMIT
 	}
 }
 
@@ -297,11 +299,11 @@ func (G *Graph) drawOctopusMerge(line *string) {
 		j := G.mapping[(G.commitIndex+i+2)*2]
 		column := G.newColumns[j]
 
-		G.lineWriteColumn(line, column, GRAPH_PRINT_MULTIBRANCH_EXTENSION)
+		G.lineWriteColumn(line, column, PRINT_MULTIBRANCH_EXTENSION)
 		if i == dashedParents-1 {
-			G.lineWriteColumn(line, column, GRAPH_PRINT_MULTIBRANCH_START)
+			G.lineWriteColumn(line, column, PRINT_MULTIBRANCH_START)
 		} else {
-			G.lineWriteColumn(line, column, GRAPH_PRINT_MULTIBRANCH_EXTENSION)
+			G.lineWriteColumn(line, column, PRINT_MULTIBRANCH_EXTENSION)
 		}
 	}
 }
@@ -313,11 +315,11 @@ func (G *Graph) padHorizontally(line *string) {
 	}
 }
 func (G *Graph) lineWriteColumn(line *string, column *Column, char string) {
-	*line += lipgloss.NewStyle().Foreground(lipgloss.Color(G.colors[column.color])).Render(char)
+	*line += shared.Colorize(char, G.colors[column.color])
 }
 func (G *Graph) outputPaddingLine(line *string) *string {
 	for i := 0; i < G.numNewColumns; i++ {
-		G.lineWriteColumn(line, G.newColumns[i], GRAPH_PRINT_PADDING)
+		G.lineWriteColumn(line, G.newColumns[i], PRINT_PADDING)
 		*line += " "
 	}
 	return line
@@ -325,9 +327,9 @@ func (G *Graph) outputPaddingLine(line *string) *string {
 func (G *Graph) outputSkipLine(line *string) *string {
 	*line = "..."
 	if G.needsPreCommitLine() {
-		G.updateState(GRAPH_PRE_COMMIT)
+		G.updateState(STATE_PRE_COMMIT)
 	} else {
-		G.updateState(GRAPH_COMMIT)
+		G.updateState(STATE_COMMIT)
 	}
 	return line
 }
@@ -344,24 +346,24 @@ func (G *Graph) outputPreCommitLine(line *string) *string {
 		column := G.columns[i]
 		if column.commit.Hash.String() == G.commit.Hash.String() {
 			seenThis = true
-			G.lineWriteColumn(line, column, GRAPH_PRINT_PADDING)
+			G.lineWriteColumn(line, column, PRINT_PADDING)
 			*line += strings.Repeat(" ", G.expansionRow)
 		} else if seenThis && G.expansionRow == 0 {
-			if G.prevState == GRAPH_POST_MERGE && G.prevCommitIndex < i {
-				G.lineWriteColumn(line, column, GRAPH_PRINT_RMOVE)
+			if G.prevState == STATE_POST_MERGE && G.prevCommitIndex < i {
+				G.lineWriteColumn(line, column, PRINT_RMOVE)
 			} else {
-				G.lineWriteColumn(line, column, GRAPH_PRINT_PADDING)
+				G.lineWriteColumn(line, column, PRINT_PADDING)
 			}
 		} else if seenThis && G.expansionRow > 0 {
-			G.lineWriteColumn(line, column, GRAPH_PRINT_RMOVE)
+			G.lineWriteColumn(line, column, PRINT_RMOVE)
 		} else {
-			G.lineWriteColumn(line, column, GRAPH_PRINT_PADDING)
+			G.lineWriteColumn(line, column, PRINT_PADDING)
 		}
 		*line += " "
 	}
 	G.expansionRow++
 	if !G.needsPreCommitLine() {
-		G.updateState(GRAPH_COMMIT)
+		G.updateState(STATE_COMMIT)
 	}
 	return line
 }
@@ -383,34 +385,41 @@ func (G *Graph) outputCommitLine(line *string) *string {
 			seenThis = true
 			/// deviation: marking the root commit
 			if G.numParents == 0 {
-				*line += "R"
+				G.lineWriteColumn(line, column, PRINT_ROOT)
+				//*line += "R"
 			} else {
-				*line += GRAPH_PRINT_COMMIT
+				/// anoter deviation: mark branch tips
+				if column == nil {
+					G.lineWriteColumn(line, &Column{}, PRINT_TIP)
+				} else {
+					G.lineWriteColumn(line, column, PRINT_COMMIT)
+				}
+				// *line += PRINT_COMMIT
 			}
 			if G.numParents > 2 {
 				G.drawOctopusMerge(line)
 			}
 		} else if seenThis && G.edgesAdded > 1 {
-			G.lineWriteColumn(line, column, GRAPH_PRINT_PADDING)
+			G.lineWriteColumn(line, column, PRINT_PADDING)
 		} else if seenThis && G.edgesAdded == 1 {
-			if G.prevState == GRAPH_POST_MERGE && G.prevEdgesAdded > 0 && G.prevCommitIndex < i {
-				G.lineWriteColumn(line, column, GRAPH_PRINT_RMOVE)
+			if G.prevState == STATE_POST_MERGE && G.prevEdgesAdded > 0 && G.prevCommitIndex < i {
+				G.lineWriteColumn(line, column, PRINT_RMOVE)
 			} else {
-				G.lineWriteColumn(line, column, GRAPH_PRINT_PADDING)
+				G.lineWriteColumn(line, column, PRINT_PADDING)
 			}
-		} else if G.prevState == GRAPH_COLLAPSING && G.oldMapping[2*i+1] == i && G.mapping[2*i] < i {
-			G.lineWriteColumn(line, column, GRAPH_PRINT_LMOVE)
+		} else if G.prevState == STATE_COLLAPSING && G.oldMapping[2*i+1] == i && G.mapping[2*i] < i {
+			G.lineWriteColumn(line, column, PRINT_LMOVE)
 		} else {
-			G.lineWriteColumn(line, column, GRAPH_PRINT_PADDING)
+			G.lineWriteColumn(line, column, PRINT_PADDING)
 		}
 		*line += " "
 	}
 	if G.numParents > 1 {
-		G.updateState(GRAPH_POST_MERGE)
+		G.updateState(STATE_POST_MERGE)
 	} else if G.isMappingCorrect() {
-		G.updateState(GRAPH_PADDING)
+		G.updateState(STATE_PADDING)
 	} else {
-		G.updateState(GRAPH_COLLAPSING)
+		G.updateState(STATE_COLLAPSING)
 	}
 	return line
 }
@@ -459,16 +468,16 @@ func (G *Graph) outputPostMergeLine(line *string) *string {
 			}
 		} else if seenThis {
 			if G.edgesAdded > 0 {
-				G.lineWriteColumn(line, column, GRAPH_PRINT_RMOVE)
+				G.lineWriteColumn(line, column, PRINT_RMOVE)
 			} else {
-				G.lineWriteColumn(line, column, GRAPH_PRINT_PADDING)
+				G.lineWriteColumn(line, column, PRINT_PADDING)
 			}
 			*line += " "
 		} else {
-			G.lineWriteColumn(line, column, GRAPH_PRINT_PADDING)
+			G.lineWriteColumn(line, column, PRINT_PADDING)
 			if G.mergeLayout != 0 || i != G.commitIndex-1 {
 				if parentColumn != nil {
-					G.lineWriteColumn(line, parentColumn, GRAPH_PRINT_BRIDGE)
+					G.lineWriteColumn(line, parentColumn, PRINT_BRIDGE)
 				} else {
 					*line += " "
 				}
@@ -479,9 +488,9 @@ func (G *Graph) outputPostMergeLine(line *string) *string {
 		}
 	}
 	if G.isMappingCorrect() {
-		G.updateState(GRAPH_PADDING)
+		G.updateState(STATE_PADDING)
 	} else {
-		G.updateState(GRAPH_COLLAPSING)
+		G.updateState(STATE_COLLAPSING)
 	}
 	return line
 }
@@ -548,22 +557,22 @@ func (G *Graph) outputCollapsingLine(line *string) *string {
 		if target < 0 {
 			*line += " "
 		} else if target*2 == i {
-			G.lineWriteColumn(line, G.newColumns[target], GRAPH_PRINT_PADDING)
+			G.lineWriteColumn(line, G.newColumns[target], PRINT_PADDING)
 		} else if target == horizontalEdgeTarget && i != horizontalEdge-1 {
 			if i != (target*2)+3 {
 				G.mapping[i] = -1
 			}
 			usedHorizontal = true
-			G.lineWriteColumn(line, G.newColumns[target], GRAPH_PRINT_BRIDGE)
+			G.lineWriteColumn(line, G.newColumns[target], PRINT_BRIDGE)
 		} else {
 			if usedHorizontal && i < horizontalEdge {
 				G.mapping[i] = -1
 			}
-			G.lineWriteColumn(line, G.newColumns[target], GRAPH_PRINT_LMOVE)
+			G.lineWriteColumn(line, G.newColumns[target], PRINT_LMOVE)
 		}
 	}
 	if G.isMappingCorrect() {
-		G.updateState(GRAPH_PADDING)
+		G.updateState(STATE_PADDING)
 	}
 	return line
 }
