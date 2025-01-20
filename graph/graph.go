@@ -111,8 +111,8 @@ func (G *Graph) Update(commit *object.Commit) {
 // / comma separated colors
 func (G *Graph) SetColors(colorstring string) {
 	colors := strings.Split(colorstring, ",")
-	for _, color := range colors {
-		color = strings.Trim(color, " ")
+	for idx, color := range colors {
+		colors[idx] = strings.TrimSpace(color)
 	}
 	G.maxColorIndex = len(colors)
 	if G.maxColorIndex < 2 {
@@ -428,7 +428,6 @@ func (G *Graph) outputPostMergeLine(line *string) *string {
 	firstParent, _ := G.commit.Parent(0)
 	var parentColumn *Column
 
-	/// FIXME: .edgesAdded is 1 here, when it should be 0? maybe?
 	for i := 0; i <= G.numColumns; i++ {
 		column := G.columns[i]
 		var colCommit *object.Commit
@@ -461,7 +460,7 @@ func (G *Graph) outputPostMergeLine(line *string) *string {
 				} else {
 					idx++
 				}
-				parents, _ = colCommit.Parent(ii + 1) //Parents().Next()
+				parents, _ = colCommit.Parent(ii + 1)
 			}
 			if G.edgesAdded == 0 {
 				*line += " "

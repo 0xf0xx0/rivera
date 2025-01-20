@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"os/signal"
 	"strings"
@@ -61,7 +62,7 @@ func main() {
 			&cli.StringFlag{
 				Name:  "branchcolors",
 				Usage: "comma separated `color,color[,color]` used for branches, passed straight to lipgloss.Color",
-				Value: "1,3,4,6,9", //"#7272A8, #ff00ff, #b00b69, #e5ebb7, #11bf7b",
+				Value: " #7272A8,#ff00ff, #b00b69, #e5ebb7,#11bf7b",
 			},
 		},
 		Action: func(ctx *cli.Context) error {
@@ -95,9 +96,9 @@ func main() {
 			// 	Order: git.LogOrderCommitterTime, /// not certain this works :\
 			// 	All:   config.displayAll,
 			// })
-			if err != nil {
-				return err
-			}
+			// if err != nil {
+			// 	return err
+			// }
 			defer iter.Close()
 			refs, _ := repo.References()
 			defer refs.Close()
@@ -213,6 +214,8 @@ func printCommit(c *object.Commit, graphLine string, tagMap, branchMap map[strin
 
 	/// how to get term width?
 	// lineLength := lipgloss.Width(line)
-	line += fmt.Sprintf(" %s", summary)
+	///
+	summaryLimit := int(math.Min(72, float64(len(summary))))
+	line += fmt.Sprintf(" %s", summary[:summaryLimit])
 	return line
 }
