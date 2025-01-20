@@ -187,8 +187,8 @@ func main() {
 func printCommit(c *object.Commit, graphLine string, tagMap, branchMap map[string][]string, isHead bool) string {
 	line := ""
 	hash := c.Hash.String()
-	timestamp := c.Committer.When.Format("2006-01-02 15:04") /// literally what is this
-	author := c.Committer.Name
+	timestamp := c.Author.When.Format("2006-01-02 15:04") /// literally what is this
+	author := c.Author.Name /// when using git webui, committer is git host, not acc
 	summary := strings.Split(c.Message, "\n")[0]
 	tags, tagOk := tagMap[hash]
 	branches, branchOk := branchMap[hash]
