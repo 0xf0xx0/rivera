@@ -386,15 +386,15 @@ func (G *Graph) outputCommitLine(line *string) *string {
 			/// deviation: marking the root commit
 			if G.numParents == 0 {
 				G.lineWriteColumn(line, column, PRINT_ROOT)
-				//*line += "R"
 			} else {
 				/// anoter deviation: mark branch tips
 				if column == nil {
-					G.lineWriteColumn(line, &Column{}, PRINT_TIP)
+					G.lineWriteColumn(line, &Column{
+						color: G.getCurrentColumnColor(), /// big brain
+					}, PRINT_TIP)
 				} else {
 					G.lineWriteColumn(line, column, PRINT_COMMIT)
 				}
-				// *line += PRINT_COMMIT
 			}
 			if G.numParents > 2 {
 				G.drawOctopusMerge(line)

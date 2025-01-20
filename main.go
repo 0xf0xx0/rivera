@@ -49,7 +49,7 @@ func main() {
 			// 	Value: false,
 			// },
 			&cli.BoolFlag{
-				Name: "force-color",
+				Name:  "force-color",
 				Usage: "force color output (useful for piping)",
 				Value: false,
 			},
@@ -61,11 +61,11 @@ func main() {
 			&cli.StringFlag{
 				Name:  "branchcolors",
 				Usage: "comma separated `color,color[,color]` used for branches, passed straight to lipgloss.Color",
-				Value: "1,3,4,6,9",//"#7272A8, #ff00ff, #b00b69, #e5ebb7, #11bf7b",
+				Value: "1,3,4,6,9", //"#7272A8, #ff00ff, #b00b69, #e5ebb7, #11bf7b",
 			},
 		},
 		Action: func(ctx *cli.Context) error {
-			if (ctx.Bool("force-color")) {
+			if ctx.Bool("force-color") {
 				os.Setenv("CLICOLOR_FORCE", "true")
 			}
 			config.repoPath = ctx.String("repository")
@@ -110,7 +110,7 @@ func main() {
 					{
 						hash := ref.Hash().String()
 						name := ref.Name()
-						if (name.IsTag()) {
+						if name.IsTag() {
 							if _, ok := tagMap[hash]; !ok {
 								tagMap[hash] = make([]string, 0, 4)
 							}
@@ -188,7 +188,7 @@ func printCommit(c *object.Commit, graphLine string, tagMap, branchMap map[strin
 	line := ""
 	hash := c.Hash.String()
 	timestamp := c.Author.When.Format("2006-01-02 15:04") /// literally what is this
-	author := c.Author.Name /// when using git webui, committer is git host, not acc
+	author := c.Author.Name                               /// when using git webui, committer is git host, not acc
 	summary := strings.Split(c.Message, "\n")[0]
 	tags, tagOk := tagMap[hash]
 	branches, branchOk := branchMap[hash]
