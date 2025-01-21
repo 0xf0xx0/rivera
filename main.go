@@ -6,6 +6,7 @@ import (
 	"math"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"strings"
 	"syscall"
 
@@ -25,10 +26,22 @@ var config = struct {
 	reverse, displayAll    bool
 }{}
 
+var Commit = func() string {
+  if info, ok := debug.ReadBuildInfo(); ok {
+    for _, setting := range info.Settings {
+      if setting.Key == "vcs.revision" {
+        return setting.Value[:8]
+      }
+    }
+  }
+
+  return ""
+}()
+
 func main() {
 	app := &cli.App{
 		Name:                   "rivera",
-		Version:                "0.0.1",
+		Version:                "0.0.1+g"+Commit,
 		Usage:                  "display the git river, like git-forest",
 		UseShortOptionHandling: true,
 		Flags: []cli.Flag{
@@ -62,7 +75,7 @@ func main() {
 			&cli.StringFlag{
 				Name:  "branchcolors",
 				Usage: "comma separated `color,color[,color]` used for branches, passed straight to lipgloss.Color",
-				Value: " #7272A8,#ff00ff, #b00b69, #e5ebb7,#11bf7b",
+				Value: "#7272A8, #ff00ff, #b00b69, #e5ebb7, #11bf7b",
 			},
 		},
 		Action: func(ctx *cli.Context) error {
@@ -214,7 +227,7 @@ func printCommit(c *object.Commit, graphLine string, tagMap, branchMap map[strin
 
 	/// how to get term width?
 	// lineLength := lipgloss.Width(line)
-	///
+	/// 50/72 rule ig
 	summaryLimit := int(math.Min(72, float64(len(summary))))
 	line += fmt.Sprintf(" %s", summary[:summaryLimit])
 	return line
