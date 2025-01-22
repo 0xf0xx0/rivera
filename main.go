@@ -10,13 +10,12 @@ import (
 	"strings"
 	"syscall"
 
-	"rivera/graph"
+	"rivera/postprocess"
 	"rivera/shared"
 
 	"github.com/go-git/go-git/v5"
 	"github.com/go-git/go-git/v5/plumbing"
 	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/go-git/go-git/v5/plumbing/object/commitgraph"
 	"github.com/urfave/cli/v2"
 )
 
@@ -27,21 +26,21 @@ var config = struct {
 }{}
 
 var Commit = func() string {
-  if info, ok := debug.ReadBuildInfo(); ok {
-    for _, setting := range info.Settings {
-      if setting.Key == "vcs.revision" {
-        return setting.Value[:8]
-      }
-    }
-  }
+	if info, ok := debug.ReadBuildInfo(); ok {
+		for _, setting := range info.Settings {
+			if setting.Key == "vcs.revision" {
+				return setting.Value[:8]
+			}
+		}
+	}
 
-  return ""
+	return ""
 }()
 
 func main() {
 	app := &cli.App{
 		Name:                   "rivera",
-		Version:                "0.0.1+g"+Commit,
+		Version:                "0.0.1+g" + Commit,
 		Usage:                  "display the git river, like git-forest",
 		UseShortOptionHandling: true,
 		Flags: []cli.Flag{
@@ -57,11 +56,11 @@ func main() {
 				Aliases: []string{"l"},
 				Value:   8,
 			},
-			// &cli.BoolFlag{
-			// 	Name:  "all",
-			// 	Usage: "display all branches",
-			// 	Value: false,
-			// },
+			&cli.BoolFlag{
+				Name:  "all",
+				Usage: "display all branches",
+				Value: false,
+			},
 			&cli.BoolFlag{
 				Name:  "force-color",
 				Usage: "force color output (useful for piping)",
@@ -98,20 +97,14 @@ func main() {
 				return err
 			}
 
-			/// TODO: readd --all
-			/// how?
-			nodeIndex := commitgraph.NewObjectCommitNodeIndex(repo.Storer)
-			headCommit, _ := nodeIndex.Get(head.Hash())
-			iter := commitgraph.NewCommitNodeIterTopoOrder(headCommit, nil, nil)
-
-			// iter, err := repo.Log(&git.LogOptions{
-			// 	From:  head.Hash(),
-			// 	Order: git.LogOrderCommitterTime, /// not certain this works :\
-			// 	All:   config.displayAll,
-			// })
-			// if err != nil {
-			// 	return err
-			// }
+			iter, err := repo.Log(&git.LogOptions{
+				From:  head.Hash(),
+				Order: git.LogOrderCommitterTime, /// not certain this works :\
+				All:   config.displayAll,
+			})
+			if err != nil {
+				return err
+			}
 			defer iter.Close()
 			refs, _ := repo.References()
 			defer refs.Close()
@@ -146,35 +139,71 @@ func main() {
 			})
 
 			/// now, we build the river
-			g := graph.New()
-			g.SetColors(config.branchcolors)
 			lines := make([]string, 0, 64)
-			// iter.ForEach(func(c *object.Commit) error {
-			iter.ForEach(func(cn commitgraph.CommitNode) error {
-				c, _ := cn.Commit()
-				g.Update(c)
-				for {
-					if g.IsCommitFinished() {
-						break
-					}
-					line, isCommit := g.NextLine()
-					if config.reverse {
-						/// TODO: do we have to do this? i think so lol
-						line = strings.ReplaceAll(line, graph.PRINT_RMOVE, "t")
-						line = strings.ReplaceAll(line, graph.PRINT_LMOVE, graph.PRINT_RMOVE)
-						line = strings.ReplaceAll(line, "t", graph.PRINT_LMOVE)
-						line = strings.ReplaceAll(line, graph.PRINT_BRIDGE, "‾")
-					}
-
-					if isCommit {
-						lines = append(lines, printCommit(c, line, tagMap, branchMap, head.Hash().String() == c.Hash.String()))
-					} else {
-						/// TODO: can we not hardcode this?
-						lines = append(lines, fmt.Sprintf("%s%s", strings.Repeat(" ", 19+config.hashLen), line))
-					}
+			commits := postprocess.IterToArray(iter)
+			vine := make([]string, 0, 8)
+			for {
+				block := postprocess.GetCommitBlock(&commits, 2)
+				if len(block) == 0 {
+					break
 				}
-				return nil
-			})
+
+				line := ""
+				commit := block[0]
+				nextCommits := block[1:]
+				sha := commit.Hash.String()
+				nextShas := make([]string, len(nextCommits))
+				for i, commit := range nextCommits {
+					nextShas[i] = commit.ID().String()
+				}
+				parents := make([]string, commit.NumParents())
+				for i := 0; i < commit.NumParents(); i++ {
+					parent, _ := commit.Parent(i)
+					parents[i] = parent.Hash.String()
+				}
+
+				timestamp := commit.Author.When.Format("2006-01-02 15:04") /// literally what is this
+				author := commit.Author.Name                               /// when using git webui, .Committer is git host, not acc
+				summary := strings.Split(commit.Message, "\n")[0]
+				tags, tagOk := tagMap[sha]
+				branches, branchOk := branchMap[sha]
+				isHead := head.Hash().String() == commit.Hash.String()
+
+				postprocess.VineBranch(&vine, sha)
+				line = fmt.Sprintf("%s %s",
+					shared.Colorize(sha[:config.hashLen], "5"),
+					shared.Colorize(timestamp, "4"))
+
+				ra := postprocess.VineCommit(&vine, sha, parents)
+
+				line += fmt.Sprint(len(vine))
+				line += " " + ra + " "
+				//line += fmt.Sprint(postprocess.VisPost(postprocess.VisCommit(ra)) + " ")
+				line += fmt.Sprintf("%s", shared.Colorize(author, "3"))
+
+				if isHead || tagOk || branchOk {
+					line += shared.Colorize(" (", "4")
+					if isHead {
+						line += shared.Colorize("HEAD %", "6")
+						if tagOk || branchOk {
+							line += " "
+						}
+					}
+					refLine := append(append(make([]string, 0, 2), tags[:]...), branches[:]...)
+					line += fmt.Sprintf("%s", strings.Join(refLine, shared.Colorize(",", "4")+" "))
+					line += shared.Colorize(")", "4")
+				}
+
+				/// how to get term width?
+				// lineLength := lipgloss.Width(line)
+				/// 50/72 rule ig
+				summaryLimit := int(math.Min(72, float64(len(summary))))
+				line += fmt.Sprintf(" %s", summary[:summaryLimit])
+
+				postprocess.VineMerge(&vine, sha, &nextShas, &parents)
+				lines = append(lines, line)
+				println(line)
+			}
 			if config.reverse {
 				for i := len(lines) - 1; i > -1; i-- {
 					line := lines[i]
