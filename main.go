@@ -176,7 +176,6 @@ func main() {
 
 				ra := postprocess.VineCommit(&vine, sha, parents)
 
-				line += fmt.Sprint(len(vine))
 				line += " " + ra + " "
 				//line += fmt.Sprint(postprocess.VisPost(postprocess.VisCommit(ra)) + " ")
 				line += fmt.Sprintf("%s", shared.Colorize(author, "3"))
@@ -202,7 +201,6 @@ func main() {
 
 				postprocess.VineMerge(&vine, sha, &nextShas, &parents)
 				lines = append(lines, line)
-				println(line)
 			}
 			if config.reverse {
 				for i := len(lines) - 1; i > -1; i-- {

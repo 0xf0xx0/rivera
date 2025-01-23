@@ -2,7 +2,6 @@ package postprocess
 
 import (
 	"math"
-	"slices"
 	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -126,6 +125,7 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 
 	if parentsLen <= 1 {
 		if parentsLen == 1 {
+
 			(*vine)[origVine] = (*parents)[0]
 		}
 		removeTrailingBlanks(*vine)
@@ -179,7 +179,7 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 	parentsLen = len(*parents)
 	slot = append(slot, origVine)
 	parent := 0
-	for seeker := 2; parent < parentsLen && seeker < 2+(vineLen-1); seeker++ {
+	for seeker := 2; parent < (parentsLen-1) && seeker < 2+(vineLen-1); seeker++ {
 		idx := 1
 		if seeker%2 == 0 {
 			idx = -1
@@ -194,8 +194,8 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 			parent++
 		}
 	}
-	for idx := origVine + 2; parent < parentsLen; idx += 2 {
-		if (*vine)[idx] == "" {
+	for idx := origVine + 2; parent < parentsLen-1; idx += 2 {
+		if idx >= vineLen || (*vine)[idx] == "" { /// is this equivalent to perl?
 			slot = append(slot, idx)
 			parent++
 		}
@@ -205,13 +205,22 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 	if slotLen != parentsLen {
 		panic("serious internal problem")
 	}
-	slices.Sort(slot)
 	max := vineLen + 2*slotLen
 
 	for i := 0; i < max; i++ {
 		strExpand(&ret, i+1)
-		if slotLen > 0 && i == slot[0] {
+		if len(slot)-1 >= 0 && i == slot[0] {
 			slot = slot[1:]
+			/// dude fuck this shit
+			/// the fucking perl code
+			/// `$vine->[$i] = shift(@$parents);`
+			/// PUSHES 2 ELEMENTS INTO VINE
+			/// how? i dont know! fuck perl! the damn docs say it only returns the furst element! FUCK
+			if i > vineLen {
+				tempVine := (*vine)[:]
+				*vine = make([]string, i+1)
+				copy(*vine, tempVine)
+			}
 			(*vine)[i] = (*parents)[0]
 			*parents = (*parents)[1:]
 
@@ -221,7 +230,7 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 				ret = ret[:i] + "s" + ret[i+1:]
 			}
 		} else if ret[i] == 's' {
-		} else if (*vine)[i] != "" {
+		} else if i >= vineLen || (*vine)[i] != "" {
 			ret = ret[:i] + "I" + ret[i+1:]
 		} else {
 			ret = ret[:i] + " " + ret[i+1:]
@@ -260,4 +269,10 @@ func strExpand(r *string, l int) {
 	if len(*r) < l {
 		*r += strings.Repeat(" ", l-len(*r))
 	}
+}
+func replaceAt(input, replacer string, idx int) string {
+	if idx < len(input)-1 {
+		return input[:idx] + replacer + input[idx+1:]
+	}
+	return input
 }
