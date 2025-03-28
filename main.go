@@ -143,12 +143,15 @@ func main() {
 			commits := postprocess.IterToArray(iter)
 			vine := make([]string, 0, 8)
 			for {
-				block := postprocess.GetCommitBlock(&commits, 2)
+				block := postprocess.GetCommitBlock(&commits, 2+1)
 				if len(block) == 0 {
 					break
 				}
 
 				line := ""
+				// for _, commit := range block {
+				// 	line += fmt.Sprintf("<%s><%s>\n", commit.Hash.String(), commit.Hash.String()[:7])
+				// }
 				commit := block[0]
 				nextCommits := block[1:]
 				sha := commit.Hash.String()
@@ -162,21 +165,25 @@ func main() {
 					parents[i] = parent.Hash.String()
 				}
 
-				timestamp := commit.Author.When.Format("2006-01-02 15:04") /// literally what is this
+				timestamp := commit.Author.When.Local().Format("2006-01-02 15:04") /// literally what is this
 				author := commit.Author.Name                               /// when using git webui, .Committer is git host, not acc
 				summary := strings.Split(commit.Message, "\n")[0]
 				tags, tagOk := tagMap[sha]
 				branches, branchOk := branchMap[sha]
 				isHead := head.Hash().String() == commit.Hash.String()
 
-				postprocess.VineBranch(&vine, sha)
-				line = fmt.Sprintf("%s %s",
+				branchLine := postprocess.VineBranch(&vine, sha)
+				if branchLine != "" {
+					lines = append(lines, strings.Repeat(" ", config.hashLen+len(timestamp)+3)+branchLine)
+				}
+
+				line += fmt.Sprintf("%s %s",
 					shared.Colorize(sha[:config.hashLen], "5"),
 					shared.Colorize(timestamp, "4"))
 
 				ra := postprocess.VineCommit(&vine, sha, parents)
 
-				line += " " + ra + " "
+				line += "  " + ra + " "
 				//line += fmt.Sprint(postprocess.VisPost(postprocess.VisCommit(ra)) + " ")
 				line += fmt.Sprintf("%s", shared.Colorize(author, "3"))
 
@@ -196,11 +203,17 @@ func main() {
 				/// how to get term width?
 				// lineLength := lipgloss.Width(line)
 				/// 50/72 rule ig
-				summaryLimit := int(math.Min(72, float64(len(summary))))
-				line += fmt.Sprintf(" %s", summary[:summaryLimit])
+				summaryLine := strings.SplitN(summary, "\n", 1)[0]
+				line += fmt.Sprintf(" %s", summaryLine)
 
-				postprocess.VineMerge(&vine, sha, &nextShas, &parents)
+				// summaryLimit := int(math.Min(72, float64(len(summary))))
+				// line += fmt.Sprintf(" %s", summary[:summaryLimit])
+
 				lines = append(lines, line)
+				mergeLine := postprocess.VineMerge(&vine, sha, &nextShas, &parents)
+				if mergeLine != "" {
+					lines = append(lines, strings.Repeat(" ", config.hashLen+len(timestamp)+3)+mergeLine)
+				}
 			}
 			if config.reverse {
 				for i := len(lines) - 1; i > -1; i-- {

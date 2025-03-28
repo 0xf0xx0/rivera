@@ -2,9 +2,14 @@ package postprocess
 
 import (
 	"math"
+	"sort"
 	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
+)
+
+var (
+	hist []string
 )
 
 // / heres where we get git-foresta-like output
@@ -24,7 +29,7 @@ func IterToArray(iter object.CommitIter) []*object.Commit {
 }
 func GetCommitBlock(commits *[]*object.Commit, max int) []*object.Commit {
 	res := make([]*object.Commit, 0, max)
-	for i := 0; i < int(math.Min(float64(max), float64(len(*commits)))); i++ {
+	for i := 0; i <= int(math.Min(float64(max), float64(len(*commits)-1))); i++ {
 		commit := (*commits)[i]
 		if i == 0 {
 			// shift
@@ -37,22 +42,24 @@ func GetCommitBlock(commits *[]*object.Commit, max int) []*object.Commit {
 func VineBranch(vine *[]string, rev string) string {
 	ret := ""
 	matched := 0
-	master := 0
+	master := false
 	for idx, commit := range *vine {
 		if commit == "" {
 			ret += " "
+			continue
 		} else if commit != rev {
 			ret += "I"
-		} else {
-			if master != 1 && idx%2 == 0 {
-				ret += "S"
-				master = 1
-			} else {
-				ret += "s"
-				(*vine)[idx] = ""
-			}
-			matched++
+			continue
 		}
+
+		if !master && idx%2 == 0 {
+			ret += "S"
+			master = true
+		} else {
+			ret += "s"
+			(*vine)[idx] = ""
+		}
+		matched++
 	}
 
 	if matched < 2 {
@@ -132,8 +139,8 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 		return ""
 	}
 	vineLen := len(*vine)
-	for i := 0; i < len(*parents) && len(*parents) > 0; i++ {
-		for ii := 0; ii < vineLen; ii++ { /// why use ++i?
+	for i := 0; i <= len(*parents)-1 && len(*parents)-1 > 0; i++ {
+		for ii := 0; ii <= vineLen-1; ii++ { /// why use ++i?
 			z := (*vine)[ii]
 			if z != (*parents)[i] || grep(z, *nextShas) == -1 {
 				continue
@@ -188,7 +195,7 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 		idx *= 2
 		idx += origVine
 
-		if idx >= 0 && idx < vineLen && (*vine)[idx] == "" {
+		if idx >= 0 && idx < vineLen-1 && (*vine)[idx] == "" {
 			slot = append(slot, idx)
 			(*vine)[idx] = strings.Repeat("0", 40) /// git sha1 length
 			parent++
@@ -205,6 +212,9 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 	if slotLen != parentsLen {
 		panic("serious internal problem")
 	}
+	sort.SliceStable(slot, func(i int, j int) bool {
+		return i < j
+	})
 	max := vineLen + 2*slotLen
 
 	for i := 0; i < max; i++ {
@@ -216,7 +226,7 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 			/// `$vine->[$i] = shift(@$parents);`
 			/// PUSHES 2 ELEMENTS INTO VINE
 			/// how? i dont know! fuck perl! the damn docs say it only returns the furst element! FUCK
-			if i > vineLen {
+			if i > len(*vine) {
 				tempVine := (*vine)[:]
 				*vine = make([]string, i+1)
 				copy(*vine, tempVine)
@@ -229,8 +239,9 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 			} else {
 				ret = ret[:i] + "s" + ret[i+1:]
 			}
-		} else if ret[i] == 's' {
-		} else if i >= vineLen || (*vine)[i] != "" {
+		} else if string(ret[i]) == "s" || i >= vineLen {
+			/// keep existing fanouts
+		} else if (*vine)[i] != "" {
 			ret = ret[:i] + "I" + ret[i+1:]
 		} else {
 			ret = ret[:i] + " " + ret[i+1:]
@@ -238,7 +249,7 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 	}
 
 	//fmt.Sprint("%-*.*s %-*s%*s", HashWidth, HashWidth, "", DateWidth, "", GraphMarginLeft, "")
-	return ret + "\n" //VisPost(VisFan(ret, "merge")) + "\n"
+	return ret //VisPost(VisFan(ret, "merge")) + "\n"
 }
 
 // func VisPost(input string) string
@@ -275,4 +286,9 @@ func replaceAt(input, replacer string, idx int) string {
 		return input[:idx] + replacer + input[idx+1:]
 	}
 	return input
+}
+func substringReplace(str string, replacer rune, index int) string {
+	out := []rune(str)
+	out[index] = replacer
+	return string(out)
 }
