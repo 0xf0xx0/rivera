@@ -44,7 +44,7 @@ func VineBranch(vine *[]string, rev string) string {
 		} else if commit != rev {
 			ret += "I"
 		} else {
-			if master == 0 && idx%2 == 0 {
+			if master != 1 && idx%2 == 0 {
 				ret += "S"
 				master = 1
 			} else {
