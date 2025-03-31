@@ -8,10 +8,6 @@ import (
 	"github.com/go-git/go-git/v5/plumbing/object"
 )
 
-var (
-	hist []string
-)
-
 // / heres where we get git-foresta-like output
 // / i cant read perl
 // / so glad we've moved on to sane languages like
@@ -66,7 +62,7 @@ func VineBranch(vine *[]string, rev string) string {
 		return ""
 	}
 	//fmt.Printf("%-*s %-*s%*s", hashWidth, "", dateWidth, "", graphMarginLeft, "")
-	removeTrailingBlanks(*vine)
+	removeTrailingBlanks(vine)
 	return ret //fmt.Sprintln(VisPost(VisFan(ret, "branch")))
 }
 func VineCommit(vine *[]string, rev string, parents []string) string {
@@ -103,7 +99,7 @@ func VineCommit(vine *[]string, rev string, parents []string) string {
 		}
 	}
 
-	removeTrailingBlanks(*vine)
+	removeTrailingBlanks(vine)
 
 	parentsLen := len(parents)
 	if parentsLen == 0 {
@@ -135,7 +131,7 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 
 			(*vine)[origVine] = (*parents)[0]
 		}
-		removeTrailingBlanks(*vine)
+		removeTrailingBlanks(vine)
 		return ""
 	}
 	vineLen := len(*vine)
@@ -260,12 +256,12 @@ func roundDown2(input int) int {
 	}
 	return input & 254
 }
-func removeTrailingBlanks(vine []string) {
-	for i := len(vine) - 1; i >= 0; i-- {
-		if vine[i] != "" {
+func removeTrailingBlanks(vine *[]string) {
+	for i := len(*vine) - 1; i >= 0; i-- {
+		if (*vine)[i] != "" {
 			break
 		}
-		vine = vine[:i]
+		*vine = (*vine)[:i]
 	}
 }
 func grep(search string, input []string) int {
@@ -286,9 +282,4 @@ func replaceAt(input, replacer string, idx int) string {
 		return input[:idx] + replacer + input[idx+1:]
 	}
 	return input
-}
-func substringReplace(str string, replacer rune, index int) string {
-	out := []rune(str)
-	out[index] = replacer
-	return string(out)
 }

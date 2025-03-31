@@ -142,6 +142,14 @@ func main() {
 			lines := make([]string, 0, 64)
 			commits := postprocess.IterToArray(iter)
 			vine := make([]string, 0, 8)
+			// for _,commit := range commits {
+			// 	parents := make([]string, commit.NumParents())
+			// 	for idx,parent := range commit.ParentHashes {
+			// 		parents[idx] = parent.String()
+			// 	}
+			// 	fmt.Printf("<%s><%s><%s>\n", commit.Hash.String(), commit.Hash.String()[:7], strings.Join(parents, " "))
+			// }
+			// return nil
 			for {
 				block := postprocess.GetCommitBlock(&commits, 2+1)
 				if len(block) == 0 {
