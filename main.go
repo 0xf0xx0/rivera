@@ -99,7 +99,7 @@ func main() {
 
 			iter, err := repo.Log(&git.LogOptions{
 				From:  head.Hash(),
-				Order: git.LogOrderCommitterTime, /// not certain this works :\
+				Order: git.LogOrderCommitterTime, /// not certain this works, but its the only one that does
 				All:   config.displayAll,
 			})
 			if err != nil {
@@ -142,14 +142,6 @@ func main() {
 			lines := make([]string, 0, 64)
 			commits := postprocess.IterToArray(iter)
 			vine := make([]string, 0, 8)
-			// for _,commit := range commits {
-			// 	parents := make([]string, commit.NumParents())
-			// 	for idx,parent := range commit.ParentHashes {
-			// 		parents[idx] = parent.String()
-			// 	}
-			// 	fmt.Printf("<%s><%s><%s>\n", commit.Hash.String(), commit.Hash.String()[:7], strings.Join(parents, " "))
-			// }
-			// return nil
 			for {
 				block := postprocess.GetCommitBlock(&commits, 2+1)
 				if len(block) == 0 {
@@ -168,9 +160,8 @@ func main() {
 					nextShas[i] = commit.ID().String()
 				}
 				parents := make([]string, commit.NumParents())
-				for i := 0; i < commit.NumParents(); i++ {
-					parent, _ := commit.Parent(i)
-					parents[i] = parent.Hash.String()
+				for i, parent := range commit.ParentHashes {
+					parents[i] = parent.String()
 				}
 
 				timestamp := commit.Author.When.Local().Format("2006-01-02 15:04") /// literally what is this

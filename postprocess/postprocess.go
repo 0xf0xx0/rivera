@@ -25,7 +25,7 @@ func IterToArray(iter object.CommitIter) []*object.Commit {
 }
 func GetCommitBlock(commits *[]*object.Commit, max int) []*object.Commit {
 	res := make([]*object.Commit, 0, max)
-	for i := 0; i <= int(math.Min(float64(max), float64(len(*commits)-1))); i++ {
+	for i := 0; i < int(math.Min(float64(max), float64(len(*commits)))); i++ {
 		commit := (*commits)[i]
 		if i == 0 {
 			// shift
@@ -128,7 +128,6 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 
 	if parentsLen <= 1 {
 		if parentsLen == 1 {
-
 			(*vine)[origVine] = (*parents)[0]
 		}
 		removeTrailingBlanks(vine)
