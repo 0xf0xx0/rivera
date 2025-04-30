@@ -2,7 +2,7 @@ package postprocess
 
 import (
 	"math"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/go-git/go-git/v5/plumbing/object"
@@ -52,7 +52,7 @@ func VineBranch(vine *[]string, rev string) string {
 			ret += "S"
 			master = true
 		} else {
-			ret += "s"
+			ret += "s" // broken
 			(*vine)[idx] = ""
 		}
 		matched++
@@ -207,8 +207,8 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 	if slotLen != parentsLen {
 		panic("serious internal problem")
 	}
-	sort.SliceStable(slot, func(i int, j int) bool {
-		return i < j
+	slices.SortStableFunc(slot, func(a, b int) int {
+		return a - b
 	})
 	max := vineLen + 2*slotLen
 
@@ -232,7 +232,7 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 			if i == origVine {
 				ret = ret[:i] + "S" + ret[i+1:]
 			} else {
-				ret = ret[:i] + "s" + ret[i+1:]
+				ret = ret[:i] + "s" + ret[i+1:] /// broken
 			}
 		} else if string(ret[i]) == "s" || i >= vineLen {
 			/// keep existing fanouts
