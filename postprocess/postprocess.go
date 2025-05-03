@@ -1,6 +1,7 @@
 package postprocess
 
 import (
+	"fmt"
 	"math"
 	"slices"
 	"strings"
@@ -217,15 +218,15 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 
 	for i := 0; i < max; i++ {
 		strExpand(&ret, i+1)
-		if i > len(*vine)-1 {
-			tempVine := (*vine)[:]
-			*vine = make([]string, i+1)
-			copy(*vine, tempVine)
-		}
 		if len(slot)-1 >= 0 && i == slot[0] {
 			slot = slot[1:]
+			if i > len(*vine)-1 {
+				(*vine) = append((*vine), "", "")
+			}
+			ret += fmt.Sprintf("%s, %v\n", rev, *vine)
 			(*vine)[i] = (*parents)[0]
 			*parents = (*parents)[1:]
+			//ret += fmt.Sprintf("%d %d", len(*vine), i)
 
 			if i == origVine {
 				ret = ret[:i] + "S" + ret[i+1:]
@@ -234,7 +235,7 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 			}
 		} else if string(ret[i]) == "s" {
 			/// keep existing fanouts
-		} else if (*vine)[i] != "" {
+		} else if i < len(*vine) && (*vine)[i] != "" {
 			ret = ret[:i] + "I" + ret[i+1:]
 		} else {
 			ret = ret[:i] + " " + ret[i+1:]
