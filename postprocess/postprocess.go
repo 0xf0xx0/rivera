@@ -61,8 +61,8 @@ func VineBranch(vine *[]string, rev string) string {
 	if matched < 2 {
 		return ""
 	}
-	//fmt.Printf("%-*s %-*s%*s", hashWidth, "", dateWidth, "", graphMarginLeft, "")
 	removeTrailingBlanks(vine)
+	//fmt.Printf("%-*s %-*s%*s", hashWidth, "", dateWidth, "", graphMarginLeft, "")
 	return ret //fmt.Sprintln(VisPost(VisFan(ret, "branch")))
 }
 func VineCommit(vine *[]string, rev string, parents []string) string {
@@ -89,8 +89,7 @@ func VineCommit(vine *[]string, rev string, parents []string) string {
 			}
 		}
 		if i < 0 {
-			vineLen := len(*vine)
-			if vineLen%2 != 0 {
+			if len(*vine)%2 != 0 {
 				*vine = append(*vine, "")
 				ret += " "
 			}
@@ -103,8 +102,10 @@ func VineCommit(vine *[]string, rev string, parents []string) string {
 
 	parentsLen := len(parents)
 	if parentsLen == 0 {
+		/// root commit has no parents
 		ret = strings.Replace(ret, "C", "r", 1)
 	} else if parentsLen > 1 {
+		/// merge
 		ret = strings.Replace(ret, "C", "M", 1)
 	}
 	return ret
@@ -129,13 +130,15 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 	if parentsLen <= 1 {
 		if parentsLen == 1 {
 			(*vine)[origVine] = (*parents)[0]
+		} else {
+			(*vine)[origVine] = ""
 		}
 		removeTrailingBlanks(vine)
 		return ""
 	}
-	vineLen := len(*vine)
+
 	for i := 0; i <= len(*parents)-1 && len(*parents)-1 > 0; i++ {
-		for ii := 0; ii <= vineLen-1; ii++ { /// why use ++i?
+		for ii := 0; ii <= len(*vine)-1; ii++ {
 			z := (*vine)[ii]
 			if z != (*parents)[i] || grep(z, *nextShas) == -1 {
 				continue
@@ -181,7 +184,7 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 	parentsLen = len(*parents)
 	slot = append(slot, origVine)
 	parent := 0
-	for seeker := 2; parent < (parentsLen-1) && seeker < 2+(vineLen-1); seeker++ {
+	for seeker := 2; parent < (parentsLen-1) && seeker < 2+(len(*vine)-1); seeker++ {
 		idx := 1
 		if seeker%2 == 0 {
 			idx = -1
@@ -190,14 +193,14 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 		idx *= 2
 		idx += origVine
 
-		if idx >= 0 && idx < vineLen-1 && (*vine)[idx] == "" {
+		if idx >= 0 && idx < len(*vine)-1 && (*vine)[idx] == "" {
 			slot = append(slot, idx)
 			(*vine)[idx] = strings.Repeat("0", 40) /// git sha1 length
 			parent++
 		}
 	}
 	for idx := origVine + 2; parent < parentsLen-1; idx += 2 {
-		if idx >= vineLen || (*vine)[idx] == "" { /// is this equivalent to perl?
+		if idx > len(*vine)-1 || (*vine)[idx] == "" { /// is this equivalent to perl?
 			slot = append(slot, idx)
 			parent++
 		}
@@ -210,22 +213,17 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 	slices.SortStableFunc(slot, func(a, b int) int {
 		return a - b
 	})
-	max := vineLen + 2*slotLen
+	max := len(*vine) + 2*slotLen
 
 	for i := 0; i < max; i++ {
 		strExpand(&ret, i+1)
+		if i > len(*vine)-1 {
+			tempVine := (*vine)[:]
+			*vine = make([]string, i+1)
+			copy(*vine, tempVine)
+		}
 		if len(slot)-1 >= 0 && i == slot[0] {
 			slot = slot[1:]
-			/// dude fuck this shit
-			/// the fucking perl code
-			/// `$vine->[$i] = shift(@$parents);`
-			/// PUSHES 2 ELEMENTS INTO VINE
-			/// how? i dont know! fuck perl! the damn docs say it only returns the furst element! FUCK
-			if i > len(*vine) {
-				tempVine := (*vine)[:]
-				*vine = make([]string, i+1)
-				copy(*vine, tempVine)
-			}
 			(*vine)[i] = (*parents)[0]
 			*parents = (*parents)[1:]
 
@@ -234,7 +232,7 @@ func VineMerge(vine *[]string, rev string, nextShas, parents *[]string) string {
 			} else {
 				ret = ret[:i] + "s" + ret[i+1:] /// broken
 			}
-		} else if string(ret[i]) == "s" || i >= vineLen {
+		} else if string(ret[i]) == "s" {
 			/// keep existing fanouts
 		} else if (*vine)[i] != "" {
 			ret = ret[:i] + "I" + ret[i+1:]
@@ -256,7 +254,7 @@ func roundDown2(input int) int {
 	return input & 254
 }
 func removeTrailingBlanks(vine *[]string) {
-	for i := len(*vine) - 1; i >= 0; i-- {
+	for i := len(*vine) - 1; i > 0; i-- {
 		if (*vine)[i] != "" {
 			break
 		}
