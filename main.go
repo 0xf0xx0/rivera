@@ -40,7 +40,7 @@ var Commit = func() string {
 func main() {
 	app := &cli.App{
 		Name:                   "rivera",
-		Version:                "0.0.1+g" + Commit,
+		Version:                "0.0.0+g" + Commit,
 		Usage:                  "display the git river, like git-forest",
 		UseShortOptionHandling: true,
 		Flags: []cli.Flag{
@@ -143,87 +143,6 @@ func main() {
 			commits := postprocess.IterToArray(iter)
 			vine := make([]string, 0, 8)
 			for {
-				block := postprocess.GetCommitBlock(&commits, 2+1)
-				if len(block) == 0 {
-					break
-				}
-
-				line := ""
-				// for _, commit := range block {
-				// 	line += fmt.Sprintf("<%s><%s>\n", commit.Hash.String(), commit.Hash.String()[:7])
-				// }
-				commit := block[0]
-				nextCommits := block[1:]
-				sha := commit.Hash.String()
-				nextShas := make([]string, len(nextCommits))
-				for i, commit := range nextCommits {
-					nextShas[i] = commit.ID().String()
-				}
-				parents := make([]string, commit.NumParents())
-				for i, parent := range commit.ParentHashes {
-					parents[i] = parent.String()
-				}
-
-				timestamp := commit.Author.When.Local().Format("2006-01-02 15:04") /// literally what is this
-				author := commit.Author.Name                               /// when using git webui, .Committer is git host, not acc
-				summary := strings.Split(commit.Message, "\n")[0]
-				tags, tagOk := tagMap[sha]
-				branches, branchOk := branchMap[sha]
-				isHead := head.Hash().String() == commit.Hash.String()
-
-				branchLine := postprocess.VineBranch(&vine, sha)
-				if branchLine != "" {
-					lines = append(lines, strings.Repeat(" ", config.hashLen+len(timestamp)+3)+branchLine)
-				}
-
-				line += fmt.Sprintf("%s %s",
-					shared.Colorize(sha[:config.hashLen], "5"),
-					shared.Colorize(timestamp, "4"))
-				//line += fmt.Sprintf("%d", len(vine))
-
-				ra := postprocess.VineCommit(&vine, sha, parents)
-
-				line += "  " + ra + " "
-				//line += fmt.Sprint(postprocess.VisPost(postprocess.VisCommit(ra)) + " ")
-				line += fmt.Sprintf("%s", shared.Colorize(author, "3"))
-
-				if isHead || tagOk || branchOk {
-					line += shared.Colorize(" (", "4")
-					if isHead {
-						line += shared.Colorize("HEAD %", "6")
-						if tagOk || branchOk {
-							line += " "
-						}
-					}
-					refLine := append(append(make([]string, 0, 2), tags[:]...), branches[:]...)
-					line += fmt.Sprintf("%s", strings.Join(refLine, shared.Colorize(",", "4")+" "))
-					line += shared.Colorize(")", "4")
-				}
-
-				/// how to get term width?
-				// lineLength := lipgloss.Width(line)
-				/// 50/72 rule ig
-				summaryLine := strings.SplitN(summary, "\n", 1)[0]
-				line += fmt.Sprintf(" %s", summaryLine)
-
-				// summaryLimit := int(math.Min(72, float64(len(summary))))
-				// line += fmt.Sprintf(" %s", summary[:summaryLimit])
-
-				lines = append(lines, line)
-				mergeLine := postprocess.VineMerge(&vine, sha, &nextShas, &parents)
-				if mergeLine != "" {
-					lines = append(lines, strings.Repeat(" ", config.hashLen+len(timestamp)+3)+mergeLine)
-				}
-			}
-			if config.reverse {
-				for i := len(lines) - 1; i > -1; i-- {
-					line := lines[i]
-					fmt.Println(line)
-				}
-			} else {
-				for _, line := range lines {
-					fmt.Println(line)
-				}
 			}
 			return nil
 		},
@@ -237,38 +156,4 @@ func main() {
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
-}
-func printCommit(c *object.Commit, graphLine string, tagMap, branchMap map[string][]string, isHead bool) string {
-	line := ""
-	hash := c.Hash.String()
-	timestamp := c.Committer.When.Format("2006-01-02 15:04") /// literally what is this
-	author := c.Author.Name                               /// when using git webui, committer is git host, not acc
-	summary := strings.Split(c.Message, "\n")[0]
-	tags, tagOk := tagMap[hash]
-	branches, branchOk := branchMap[hash]
-
-	line = fmt.Sprintf("%s %s  %s%s",
-		shared.Colorize(hash[:config.hashLen], "5"),
-		shared.Colorize(timestamp, "4"),
-		graphLine,
-		shared.Colorize(author, "3"))
-	if isHead || tagOk || branchOk {
-		line += shared.Colorize(" (", "4")
-		if isHead {
-			line += shared.Colorize("HEAD %", "6")
-			if tagOk || branchOk {
-				line += " "
-			}
-		}
-		refLine := append(append(make([]string, 0, 2), tags[:]...), branches[:]...)
-		line += fmt.Sprintf("%s", strings.Join(refLine, shared.Colorize(",", "4")+" "))
-		line += shared.Colorize(")", "4")
-	}
-
-	/// how to get term width?
-	// lineLength := lipgloss.Width(line)
-	/// 50/72 rule ig
-	summaryLimit := int(math.Min(72, float64(len(summary))))
-	line += fmt.Sprintf(" %s", summary[:summaryLimit])
-	return line
 }
