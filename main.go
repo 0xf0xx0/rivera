@@ -37,7 +37,7 @@ var config = struct {
 	reverse, displayAll    bool
 }{}
 
-var Commit = func() string {
+var buildCommit = func() string {
 	if info, ok := debug.ReadBuildInfo(); ok {
 		for _, setting := range info.Settings {
 			if setting.Key == "vcs.revision" {
@@ -52,7 +52,7 @@ var Commit = func() string {
 func main() {
 	app := &cli.Command{
 		Name:                   "rivera",
-		Version:                "0.0.0+g" + Commit,
+		Version:                "0.0.0+g" + buildCommit,
 		Usage:                  "display the git river, like git-forest",
 		UseShortOptionHandling: true,
 		Flags: []cli.Flag{
