@@ -1,22 +1,30 @@
 package main
 
 import (
+	"bufio"
+	"context"
 	"fmt"
 	"log"
-	"math"
 	"os"
+	"os/exec"
 	"os/signal"
+	"path/filepath"
+	"regexp"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"syscall"
 
-	"rivera/postprocess"
-	"rivera/shared"
+	"github.com/urfave/cli/v3"
+)
 
-	"github.com/go-git/go-git/v5"
-	"github.com/go-git/go-git/v5/plumbing"
-	"github.com/go-git/go-git/v5/plumbing/object"
-	"github.com/urfave/cli/v2"
+var (
+	lineRegex    = regexp.MustCompile(`^<(.*?)><(.*?)><(.*?)>(.*)`)
+	nextShaRegex = regexp.MustCompile(`^<(.*?)>`)
+)
+
+var (
+	global_commitBuffer []string
 )
 
 var config = struct {
@@ -38,7 +46,7 @@ var Commit = func() string {
 }()
 
 func main() {
-	app := &cli.App{
+	app := &cli.Command{
 		Name:                   "rivera",
 		Version:                "0.0.0+g" + Commit,
 		Usage:                  "display the git river, like git-forest",
@@ -77,74 +85,20 @@ func main() {
 				Value: "#7272A8, #ff00ff, #b00b69, #e5ebb7, #11bf7b",
 			},
 		},
-		Action: func(ctx *cli.Context) error {
+		Action: func(_ context.Context, ctx *cli.Command) error {
 			if ctx.Bool("force-color") {
 				os.Setenv("CLICOLOR_FORCE", "true")
 			}
-			config.repoPath = ctx.String("repository")
+			config.repoPath = filepath.Join(ctx.String("repository"), "./.git")
 			config.displayAll = ctx.Bool("all")
 			config.reverse = ctx.Bool("reverse")
 			config.hashLen = ctx.Int("hashlength")
 			config.branchcolors = ctx.String("branchcolors")
 
-			repo, err := git.PlainOpen(config.repoPath)
-			if err != nil {
-				return err
-			}
-
-			head, err := repo.Head()
-			if err != nil {
-				return err
-			}
-
-			iter, err := repo.Log(&git.LogOptions{
-				From:  head.Hash(),
-				Order: git.LogOrderCommitterTime, /// not certain this works, but its the only one that does
-				All:   config.displayAll,
-			})
-			if err != nil {
-				return err
-			}
-			defer iter.Close()
-			refs, _ := repo.References()
-			defer refs.Close()
-
-			tagMap := make(map[string][]string)
-			branchMap := make(map[string][]string)
-			refs.ForEach(func(ref *plumbing.Reference) error {
-				switch ref.Type() {
-				case plumbing.HashReference:
-					{
-						hash := ref.Hash().String()
-						name := ref.Name()
-						if name.IsTag() {
-							if _, ok := tagMap[hash]; !ok {
-								tagMap[hash] = make([]string, 0, 4)
-							}
-							tagMap[hash] = append(tagMap[hash], shared.Colorize("tag: ", "5")+shared.Colorize(name.Short(), "3"))
-						}
-						if name.IsRemote() || name.IsBranch() {
-							if _, ok := branchMap[hash]; !ok {
-								branchMap[hash] = make([]string, 0, 4)
-							}
-							if name.IsRemote() {
-								branchMap[hash] = append(branchMap[hash], shared.Colorize(name.Short(), "1"))
-							} else {
-								branchMap[hash] = append(branchMap[hash], shared.Colorize(name.Short(), "2"))
-							}
-						}
-					}
-				}
-				return nil
-			})
-
+			//////
 			/// now, we build the river
-			lines := make([]string, 0, 64)
-			commits := postprocess.IterToArray(iter)
-			vine := make([]string, 0, 8)
-			for {
-			}
-			return nil
+			//////
+			return processCommits()
 		},
 	}
 	/// discard sigpipe
@@ -153,7 +107,274 @@ func main() {
 		signal.Notify(c, syscall.SIGPIPE)
 		<-c
 	}()
-	if err := app.Run(os.Args); err != nil {
+	if err := app.Run(context.Background(), os.Args); err != nil {
 		log.Fatal(err)
 	}
+}
+
+func processCommits() error {
+	// refs :=
+	vine := make([]string, 0, 8)
+
+	/// TODO: make option
+	PRETTY := "%H\t%at\t%an\t%C(reset)%C(auto)%d%C(reset)\t%s"
+	cmd := exec.Command("git", "--git-dir="+config.repoPath, "log", "--date-order", "--pretty=format:<%H><%h><%P>"+PRETTY)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return cli.Exit(err.Error(), 1)
+	}
+	if err := cmd.Start(); err != nil {
+		return cli.Exit(err.Error(), 1)
+	}
+	reader := bufio.NewReader(stdout)
+
+	global_commitBuffer = make([]string, 0, 10)
+
+	for {
+		lines, err := getLineBlock(reader, 2)
+		if err != nil {
+			return cli.Exit(err.Error(), 1)
+		}
+		if len(lines) == 0 {
+			break
+		}
+		line := strings.TrimSpace(lines[0])
+		if line == "" {
+			break
+		}
+		nextLines := []string{}
+		if len(lines) > 1 {
+			nextLines = lines[1:]
+		}
+		nextShas := make([]string, 0, len(nextLines))
+		for idx := range nextLines {
+			matches := nextShaRegex.FindStringSubmatch(nextLines[idx])
+			if len(matches) == 0 {
+				continue
+			}
+			nextShas = append(nextShas, matches[0])
+		}
+		sha, mini, msg, parents := parseLine(line)
+		_, t, author, refs, message := splitMessage(msg)
+
+		// fmt.Printf("\t%s...%s %s %s %s %s\n", hash[:7], hash[len(hash)-7:], t, author, refs, message)
+
+		vineBranch(&vine, sha)
+
+		fmt.Printf("%s %s  ", mini, t.Format("2006-01-02 15:04"))
+		vineCommit(&vine, sha, parents)
+
+		/// TODO: auto refs, padding
+		if refs != "" {
+			fmt.Printf(" %s%s %s\n", author, refs, message)
+		} else {
+			fmt.Printf(" %s %s\n", author, message)
+		}
+		vineMerge(&vine, sha, nextShas, parents)
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return cli.Exit(err.Error(), 1)
+	}
+	return nil
+}
+
+func vineBranch(vine *[]string, sha string) {
+	matchedCount := 0
+	masterDrawn := false
+	output := ""
+
+	for columnIndex := range *vine {
+		if (*vine)[columnIndex] == "" {
+			output += " "
+		} else if (*vine)[columnIndex] != sha {
+			output += "I" // Straight line (other branch continues)
+		} else {
+			// This column points to our commit
+			if !masterDrawn && columnIndex%2 == 0 {
+				output += "S" // Main branch split
+				masterDrawn = true
+			} else {
+				output += "s"             // Secondary branch split
+				(*vine)[columnIndex] = "" // Clear
+			}
+			matchedCount++
+		}
+	}
+	// Only print if multiple branches converged
+	if matchedCount >= 2 {
+		removeTrailingBlanks(vine)
+		fmt.Println(strings.Repeat(" ", 26) + output)
+		// fmt.Print(visualTransform(output))
+	}
+}
+func vineCommit(vine *[]string, sha string, parents []string) {
+	output := ""
+
+	for columnIndex := range *vine {
+		if (*vine)[columnIndex] == "" {
+			output += " "
+		} else if (*vine)[columnIndex] == sha {
+			output += "C"
+		} else {
+			output += "I"
+		}
+	}
+	if !strings.Contains(output, "C") {
+		i := 0
+		for i = roundDown2(len(*vine) - 1); i >= 0; i -= 2 {
+			if output[i] == ' ' {
+				replaceAt(&output, "t", i)
+				(*vine)[i] = sha
+				break
+			}
+		}
+		if i < 0 {
+			if len(*vine)%2 != 0 {
+				output += " "
+				*vine = append(*vine, "")
+			}
+			output += "t"
+			*vine = append(*vine, sha)
+		}
+	}
+	// println(fmt.Printf("vine: %q %d", *vine, len(*vine)))
+
+
+	removeTrailingBlanks(vine)
+
+	if len(parents) == 0 {
+		output = strings.Replace(output, "C", "r", 1)
+	} else if len(parents) > 1 {
+		output = strings.Replace(output, "C", "M", 1)
+	}
+	print(output)
+}
+func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
+	originalColumn := -1
+	output := ""
+	slot := make([]int, 0, 8)
+
+	for idx := range *vine {
+		if (*vine)[idx] == sha {
+			originalColumn = idx
+			break
+		}
+	}
+	if originalColumn == -1 {
+		panic("vineCommit didn't add this vine")
+	}
+
+	if len(parents) < 2 {
+		if len(parents) > 0 {
+			(*vine)[originalColumn] = parents[0]
+		}
+		removeTrailingBlanks(vine)
+		return
+	}
+	for idx := 0; idx < len(parents) && len(parents) > 1; idx++ {
+		parent := parents[idx]
+	columnSeek:
+		for column := range *vine {
+			if (*vine)[column] == parent && slices.Contains(nextShas, parent) {
+				pos := -1
+				if idx == originalColumn {
+					panic("shouldnt really happen?")
+				}
+				if idx < originalColumn {
+					pos = idx + 1
+					/// TODO: is empty string "undefined"?
+					if (*vine)[pos] != "" {
+						pos = idx - 1
+					}
+					if (*vine)[pos] != "" {
+						break columnSeek
+					}
+				} else {
+					pos = idx - 1
+					if pos < 0 || (*vine)[pos] != "" {
+						pos = idx + 1
+					}
+					if (*vine)[pos] != "" {
+						break columnSeek
+					}
+				}
+
+				(*vine)[pos] = parents[idx]
+				/// TODO: maybe fixme?
+				strExpand(&output, pos+1)
+				replaceAt(&output, "s", pos)
+				parents = slices.Concat(parents[:idx], parents[idx+1:])
+				idx = idx - 1
+				break columnSeek
+			}
+		}
+	}
+
+	/// slotting
+	slot = append(slot, originalColumn)
+	parentCounter := 0
+
+	for seeker := 2; parentCounter < len(parents)-1 && seeker < 2+(len(*vine)-1); seeker++ {
+		idx := 1
+		if seeker%2 == 0 {
+			idx = -1
+		}
+		idx *= (seeker / 2)*2
+		idx += originalColumn
+
+		if idx >= 0 && idx < len(*vine) && (*vine)[idx] == "" {
+			slot = append(slot, idx)
+			(*vine)[idx] = strings.Repeat("0", 40)
+			parentCounter++
+		}
+	}
+	// println(len(*vine)+2, parentCounter, len(parents))
+
+	for idx := originalColumn + 2; parentCounter < len(parents)-1; idx += 2 {
+		// fmt.Printf("%q, %d, %d %d\n", *vine, idx, parentCounter, len(parents))
+		/// TODO: is this how we interpret `undef`?
+		if idx >= len(*vine) || (*vine)[idx] == "" {
+			slot = append(slot, idx)
+			parentCounter++
+		}
+	}
+
+	if len(slot) != len(parents) {
+		println(len(slot), len(parents))
+		fmt.Printf("%q\n", slot)
+		panic("serious internal error")
+	}
+
+	slices.Sort(slot)
+	maxLen := len(*vine) + 2*len(slot)
+	// println(len(*vine), len(slot), maxLen)
+	// fmt.Printf("%q\n", *vine)
+	for i := 0; i < maxLen; i++ {
+		strExpand(&output, i+1)
+		if len(slot) > 0 && i == slot[0] {
+			slot = slot[1:]
+			/// fml
+			if i >= len(*vine) {
+				newVine := make([]string, i+1)
+				copy(newVine, *vine)
+				vine = &newVine
+			}
+			(*vine)[i] = parents[0]
+			parents = parents[1:]
+			if i == originalColumn {
+				replaceAt(&output, "S", i)
+			} else {
+				replaceAt(&output, "s", i)
+			}
+		} else if output[i] == 's' {
+			/// *crickets*
+		} else if i < len(*vine) && (*vine)[i] != "" {
+			replaceAt(&output, "I", i)
+		} else {
+			replaceAt(&output, " ", i)
+		}
+	}
+	/// TODO: dynamic
+	fmt.Println(strings.Repeat(" ", 26)+output)
 }
