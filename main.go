@@ -18,6 +18,10 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+const (
+	DATE_FMT = "2006-01-02 15:04"
+)
+
 var (
 	lineRegex    = regexp.MustCompile(`^<(.*?)><(.*?)><(.*?)>(.*)`)
 	nextShaRegex = regexp.MustCompile(`^<(.*?)>`)
@@ -131,7 +135,8 @@ func processCommits() error {
 	global_commitBuffer = make([]string, 0, 10)
 
 	for {
-		lines, err := getLineBlock(reader, 2)
+		/// TODO: subvineDepth?
+		lines, err := getLineBlock(reader, 3)
 		if err != nil {
 			return cli.Exit(err.Error(), 1)
 		}
@@ -154,14 +159,14 @@ func processCommits() error {
 			}
 			nextShas = append(nextShas, matches[0])
 		}
-		sha, mini, msg, parents := parseLine(line)
+		sha, _, msg, parents := parseLine(line)
 		_, t, author, refs, message := splitMessage(msg)
 
 		// fmt.Printf("\t%s...%s %s %s %s %s\n", hash[:7], hash[len(hash)-7:], t, author, refs, message)
 
 		vineBranch(&vine, sha)
 
-		fmt.Printf("%s %s  ", mini, t.Format("2006-01-02 15:04"))
+		fmt.Printf("%s %s  ", sha[:config.hashLen], t.Format(DATE_FMT))
 		vineCommit(&vine, sha, parents)
 
 		/// TODO: auto refs, padding
@@ -170,6 +175,7 @@ func processCommits() error {
 		} else {
 			fmt.Printf(" %s %s\n", author, message)
 		}
+
 		vineMerge(&vine, sha, nextShas, parents)
 	}
 
@@ -204,7 +210,8 @@ func vineBranch(vine *[]string, sha string) {
 	// Only print if multiple branches converged
 	if matchedCount >= 2 {
 		removeTrailingBlanks(vine)
-		fmt.Println(strings.Repeat(" ", 26) + output)
+		// +2 for spaces between
+		fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
 		// fmt.Print(visualTransform(output))
 	}
 }
@@ -240,7 +247,6 @@ func vineCommit(vine *[]string, sha string, parents []string) {
 	}
 	// println(fmt.Printf("vine: %q %d", *vine, len(*vine)))
 
-
 	removeTrailingBlanks(vine)
 
 	if len(parents) == 0 {
@@ -248,7 +254,7 @@ func vineCommit(vine *[]string, sha string, parents []string) {
 	} else if len(parents) > 1 {
 		output = strings.Replace(output, "C", "M", 1)
 	}
-	print(output)
+	fmt.Print(output)
 }
 func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 	originalColumn := -1
@@ -272,42 +278,41 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 		removeTrailingBlanks(vine)
 		return
 	}
-	for idx := 0; idx < len(parents) && len(parents) > 1; idx++ {
-		parent := parents[idx]
-	columnSeek:
-		for column := range *vine {
-			if (*vine)[column] == parent && slices.Contains(nextShas, parent) {
-				pos := -1
-				if idx == originalColumn {
-					panic("shouldnt really happen?")
-				}
-				if idx < originalColumn {
-					pos = idx + 1
-					/// TODO: is empty string "undefined"?
-					if (*vine)[pos] != "" {
-						pos = idx - 1
-					}
-					if (*vine)[pos] != "" {
-						break columnSeek
-					}
-				} else {
-					pos = idx - 1
-					if pos < 0 || (*vine)[pos] != "" {
-						pos = idx + 1
-					}
-					if (*vine)[pos] != "" {
-						break columnSeek
-					}
-				}
-
-				(*vine)[pos] = parents[idx]
-				/// TODO: maybe fixme?
-				strExpand(&output, pos+1)
-				replaceAt(&output, "s", pos)
-				parents = slices.Concat(parents[:idx], parents[idx+1:])
-				idx = idx - 1
-				break columnSeek
+	for j := 0; j < len(parents) && len(parents) > 1; j++ {
+		for idx := range *vine {
+			if (*vine)[idx] != parents[j] || !slices.Contains(nextShas, (*vine)[idx]) {
+				continue
 			}
+			if idx == originalColumn {
+				panic("shouldnt really happen?")
+			}
+			pos := -1
+			if idx < originalColumn {
+				pos = idx + 1
+				/// TODO: is empty string "undefined"?
+				if (*vine)[pos] != "" {
+					pos = idx - 1
+				}
+				if (*vine)[pos] != "" {
+					break
+				}
+			} else {
+				pos = idx - 1
+				if pos < 0 || (*vine)[pos] != "" {
+					pos = idx + 1
+				}
+				if (*vine)[pos] != "" {
+					break
+				}
+			}
+
+			(*vine)[pos] = parents[j]
+			/// TODO: maybe fixme?
+			strExpand(&output, pos+1)
+			replaceAt(&output, "s", pos)
+			parents = slices.Concat(parents[:j], parents[j+1:])
+			j = j - 1
+			break
 		}
 	}
 
@@ -320,7 +325,7 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 		if seeker%2 == 0 {
 			idx = -1
 		}
-		idx *= (seeker / 2)*2
+		idx *= (seeker / 2) * 2
 		idx += originalColumn
 
 		if idx >= 0 && idx < len(*vine) && (*vine)[idx] == "" {
@@ -329,8 +334,6 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 			parentCounter++
 		}
 	}
-	// println(len(*vine)+2, parentCounter, len(parents))
-
 	for idx := originalColumn + 2; parentCounter < len(parents)-1; idx += 2 {
 		// fmt.Printf("%q, %d, %d %d\n", *vine, idx, parentCounter, len(parents))
 		/// TODO: is this how we interpret `undef`?
@@ -358,7 +361,7 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 			if i >= len(*vine) {
 				newVine := make([]string, i+1)
 				copy(newVine, *vine)
-				vine = &newVine
+				*vine = newVine
 			}
 			(*vine)[i] = parents[0]
 			parents = parents[1:]
@@ -369,6 +372,7 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 			}
 		} else if output[i] == 's' {
 			/// *crickets*
+			/// NOTE: bug? remove i < len
 		} else if i < len(*vine) && (*vine)[i] != "" {
 			replaceAt(&output, "I", i)
 		} else {
@@ -376,5 +380,5 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 		}
 	}
 	/// TODO: dynamic
-	fmt.Println(strings.Repeat(" ", 26)+output)
+	fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
 }
