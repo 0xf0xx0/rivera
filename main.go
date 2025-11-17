@@ -218,8 +218,8 @@ func vineBranch(vine *[]string, sha string) {
 	}
 	removeTrailingBlanks(vine)
 	// +2 for spaces between
-	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visFan(output, "branch"))
-	fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
+	fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visFan(output, "branch"))
+	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
 }
 func vineCommit(vine *[]string, sha string, parents []string) {
 	output := ""
@@ -384,25 +384,25 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 		}
 	}
 	/// TODO: dynamic
-	fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
-	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visFan(output, "merge"))
+	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
+	fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visFan(output, "merge"))
 }
 
 /// beautification
 
 func visFan(s, t string) string {
 	isBranch := t == "branch"
-	r := regexp.MustCompile(`s.*s`)
+	r := regexp.MustCompile(`(?i)s.*s`)
 	r2 := regexp.MustCompile(`O[DO]+O`)
 	rS1 := regexp.MustCompile(`(s.*)S(.*s)`)
 	rS2 := regexp.MustCompile(`(s.*)S`)
 	rS3 := regexp.MustCompile(`S(.*s)`)
 
-	r.ReplaceAllStringFunc(s, func(s string) string {
-		return strings.ReplaceAll(s, " I", "DO")
+	s = r.ReplaceAllStringFunc(s, func(x string) string {
+		return strings.ReplaceAll(strings.ReplaceAll(x, " ", "D"), "I", "O")
 	})
-	r2.ReplaceAllStringFunc(s, func(s string) string {
-		return strings.Repeat("O", len(s))
+	s = r2.ReplaceAllStringFunc(s, func(x string) string {
+		return strings.Repeat("O", len(x))
 	})
 
 	if m := rS1.FindStringSubmatch(s); len(m) > 0 {
