@@ -159,7 +159,7 @@ func processCommits() error {
 			if len(matches) == 0 {
 				continue
 			}
-			nextShas = append(nextShas, matches[0])
+			nextShas = append(nextShas, matches[1])
 		}
 		sha, _, msg, parents := parseLine(line)
 		_, t, author, refs, message := splitMessage(msg)
@@ -169,6 +169,7 @@ func processCommits() error {
 		vineBranch(&vine, sha)
 
 		fmt.Printf(oigiki.ProcessTags("{magenta}%s {blue}%s  "), sha[:config.hashLen], t.Format(DATE_FMT))
+
 		vineCommit(&vine, sha, parents)
 
 		/// TODO: auto refs, padding
@@ -212,12 +213,13 @@ func vineBranch(vine *[]string, sha string) {
 		}
 	}
 	// Only print if multiple branches converged
-	if matchedCount >= 2 {
-		removeTrailingBlanks(vine)
-		// +2 for spaces between
-		fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
-		// fmt.Print(visualTransform(output))
+	if matchedCount < 2 {
+		return
 	}
+	removeTrailingBlanks(vine)
+	// +2 for spaces between
+	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visFan(output, "branch"))
+	fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
 }
 func vineCommit(vine *[]string, sha string, parents []string) {
 	output := ""
@@ -314,7 +316,7 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 			/// TODO: maybe fixme?
 			strExpand(&output, pos+1)
 			replaceAt(&output, "s", pos)
-			parents = slices.Concat(parents[:j], parents[j+1:])
+			parents = append(parents[:j], parents[j+1:]...)
 			j = j - 1
 			break
 		}
@@ -355,8 +357,6 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 
 	slices.Sort(slot)
 	maxLen := len(*vine) + 2*len(slot)
-	// println(len(*vine), len(slot), maxLen)
-	// fmt.Printf("%q\n", *vine)
 	for i := 0; i < maxLen; i++ {
 		strExpand(&output, i+1)
 		if len(slot) > 0 && i == slot[0] {
@@ -376,7 +376,7 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 			}
 		} else if output[i] == 's' {
 			/// *crickets*
-			/// NOTE: bug? remove i < len
+			/// NOTE: bug? remove i < len?
 		} else if i < len(*vine) && (*vine)[i] != "" {
 			replaceAt(&output, "I", i)
 		} else {
@@ -388,35 +388,3 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 }
 
 /// beautification
-
-func visCommit(s, f string) string {
-	return strings.TrimRight(s, " ") + f
-}
-// func visPost(s, f string) string {
-// 	fDefined := f != ""
-// 	s = visXfrm(s, fDefined)
-
-// 	if fDefined {
-// 		f = nonEscRegex.ReplaceAllStringFunc(f, func(m string) string {
-// 			return visXfrm(m, true)
-// 		})
-
-// 		f = escRegex.ReplaceAllStringFunc(f, func(m string) string {
-// 			parts := escRegex.FindStringSubmatch(m)
-// 			escSeq := parts[1]
-// 			plain := parts[2]
-// 			return escSeq + visXfrm(plain, true)
-// 		})
-
-// 		s = strings.ReplaceAll(s, "*", f)
-
-// 		defaultEsc := regexp.QuoteMeta("\x1b[0m")
-// 		reDef := regexp.MustCompile(defaultEsc)
-// 		s = reDef.ReplaceAllStringFunc(s, func(m string) string {
-// 			return m + "\x1b[32m" /// TODO
-// 		})
-
-// 		// c) Append f to the end of s
-// 		s += f
-// 	}
-// }
