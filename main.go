@@ -23,6 +23,7 @@ const (
 	DATE_FMT = "2006-01-02 15:04"
 )
 
+// regex
 var (
 	lineRegex    = regexp.MustCompile(`^<(.*?)><(.*?)><(.*?)>(.*)`)
 	nextShaRegex = regexp.MustCompile(`^<(.*?)>`)
@@ -30,8 +31,17 @@ var (
 	escRegex     = regexp.MustCompile(`(\x1b.*?m)([^\x1b]+)`)
 )
 
+// global
 var (
 	global_commitBuffer []string
+	BRANCH_COLORS = []string{
+		"red",
+		"blue",
+		"yellow",
+		"green",
+		"cyan",
+		"magenta",
+	}
 )
 
 var config = struct {
@@ -126,7 +136,11 @@ func processCommits() error {
 
 	/// TODO: make option
 	PRETTY := "%H\t%at\t%an\t%C(reset)%C(auto)%d%C(reset)\t%s"
-	cmd := exec.Command("git", "--git-dir="+config.repoPath, "log", "--date-order", "--pretty=format:<%H><%h><%P>"+PRETTY)
+	cmd := exec.Command("git", "--git-dir="+config.repoPath,
+		"log", "--date-order", "--pretty=format:<%H><%h><%P>"+PRETTY)
+	if config.displayAll {
+		cmd.Args = append(cmd.Args, "--all",  "HEAD")
+	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return cli.Exit(err.Error(), 1)
@@ -136,6 +150,7 @@ func processCommits() error {
 	}
 	reader := bufio.NewReader(stdout)
 
+	collectedLines := make([]string, 0, 12)
 	for {
 		/// TODO: subvineDepth?
 		lines, err := getLineBlock(reader, 3)
@@ -164,22 +179,32 @@ func processCommits() error {
 		sha, _, msg, parents := parseLine(line)
 		_, t, author, refs, message := splitMessage(msg)
 
-		// fmt.Printf("\t%s...%s %s %s %s %s\n", hash[:7], hash[len(hash)-7:], t, author, refs, message)
+		ret := vineBranch(&vine, sha)
 
-		vineBranch(&vine, sha)
+		ret += fmt.Sprintf(oigiki.ProcessTags("{magenta}%s {blue}%s  "), sha[:config.hashLen], t.Format(DATE_FMT))
 
-		fmt.Printf(oigiki.ProcessTags("{magenta}%s {blue}%s  "), sha[:config.hashLen], t.Format(DATE_FMT))
-
-		vineCommit(&vine, sha, parents)
+		ret += vineCommit(&vine, sha, parents)
 
 		/// TODO: auto refs, padding
 		if refs != "" {
-			fmt.Printf(oigiki.ProcessTags(" {yellow}%s%s {/}%s\n"), author, refs, message)
+			ret += fmt.Sprintf(oigiki.ProcessTags(" {yellow}%s%s {/}%s\n"), author, refs, message)
 		} else {
-			fmt.Printf(oigiki.ProcessTags(" {yellow}%s {/}%s\n"), author, message)
+			ret += fmt.Sprintf(oigiki.ProcessTags(" {yellow}%s {/}%s\n"), author, message)
 		}
 
-		vineMerge(&vine, sha, nextShas, parents)
+		if config.reverse {
+			collectedLines = append(collectedLines, ret)
+			collectedLines = append(collectedLines, vineMerge(&vine, sha, nextShas, parents))
+		} else {
+			ret += vineMerge(&vine, sha, nextShas, parents)
+			fmt.Print(ret)
+		}
+	}
+	/// TODO: likely impossible but printing
+	if config.reverse {
+		for _,x := range slices.Backward(collectedLines) {
+			fmt.Print(x)
+		}
 	}
 
 	if err := cmd.Wait(); err != nil {
@@ -190,7 +215,7 @@ func processCommits() error {
 
 /// layout
 
-func vineBranch(vine *[]string, sha string) {
+func vineBranch(vine *[]string, sha string) string {
 	matchedCount := 0
 	masterDrawn := false
 	output := ""
@@ -214,14 +239,16 @@ func vineBranch(vine *[]string, sha string) {
 	}
 	// Only print if multiple branches converged
 	if matchedCount < 2 {
-		return
+		return ""
 	}
 	removeTrailingBlanks(vine)
 	// +2 for spaces between
-	fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visFan(output, "branch"))
 	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
+	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visFan(output, "branch"))
+	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visPost(visFan(output, "branch"), ""))
+	return fmt.Sprintln(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visPost(visFan(output, "branch"), ""))
 }
-func vineCommit(vine *[]string, sha string, parents []string) {
+func vineCommit(vine *[]string, sha string, parents []string) string {
 	output := ""
 
 	for columnIndex := range *vine {
@@ -260,9 +287,11 @@ func vineCommit(vine *[]string, sha string, parents []string) {
 	} else if len(parents) > 1 {
 		output = strings.Replace(output, "C", "M", 1)
 	}
-	fmt.Print(output)
+	// fmt.Print(output)
+	// fmt.Print(visPost(output, ""))
+	return visPost(output, "")
 }
-func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
+func vineMerge(vine *[]string, sha string, nextShas, parents []string) string {
 	originalColumn := -1
 	output := ""
 	slot := make([]int, 0, 8)
@@ -282,7 +311,7 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 			(*vine)[originalColumn] = parents[0]
 		}
 		removeTrailingBlanks(vine)
-		return
+		return ""
 	}
 	for j := 0; j < len(parents) && len(parents) > 1; j++ {
 		for idx := range *vine {
@@ -299,7 +328,7 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 				if (*vine)[pos] != "" {
 					pos = idx - 1
 				}
-				if (*vine)[pos] != "" {
+				if pos < 0 || (*vine)[pos] != "" {
 					break
 				}
 			} else {
@@ -385,13 +414,17 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 	}
 	/// TODO: dynamic
 	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
-	fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visFan(output, "merge"))
+	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visFan(output, "merge"))
+	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visPost(visFan(output, "merge"), ""))
+	// return ""
+	return fmt.Sprintln(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visPost(visFan(output, "merge"), ""))
 }
 
 /// beautification
 
 func visFan(s, t string) string {
 	isBranch := t == "branch"
+	/// TODO: cleanup
 	r := regexp.MustCompile(`(?i)s.*s`)
 	r2 := regexp.MustCompile(`O[DO]+O`)
 	rS1 := regexp.MustCompile(`(s.*)S(.*s)`)
@@ -441,19 +474,56 @@ func visFan3(l, r string) string {
 	return l + "K" + r
 }
 func visXfrm(s string, spec bool) string {
+	/*
+	 NOTE: from original perl:
+		# A: branch to right
+		# B: branch to right
+		# C: commit
+		# M: merge commit
+		# D:
+		# e: merge visual left (╔)
+		# f: merge visual center (╦)
+		# g: merge visual right (╗)
+		# I: straight line (║)
+		# K: branch visual split (╬)
+		# m: single line (─)
+		# O: overpass (≡)
+		# r: root (╙)
+		# t: tip (╓)
+		# x: branch visual left (╚)
+		# y: branch visual center (╩)
+		# z: branch visual right (╝)
+		# *: filler
+	 */
 	r := regexp.MustCompile(`[Ctr].*`)
 	if spec {
-		s = r.ReplaceAllStringFunc(s, func(s string) string {
-			return strings.ReplaceAll(s, " ", "*")
+		s = r.ReplaceAllStringFunc(s, func(x string) string {
+			return strings.ReplaceAll(x, " ", "*")
 		})
 	}
-	/// WIP
+	oddPoses := make([]rune, 0, len(s)/2)
+	for i, r := range s {
+		if i%2 == 0 {
+			oddPoses = append(oddPoses, r)
+		}
+	}
+	for _, r := range oddPoses {
+		if r == 'e' || r == 'f' || r == 'g' || r == 't' {
+			/// TODO: ig colors are done here
+		}
+	}
+	if config.reverse {
+		s = tr(s, "efg.xyz","xyz.efg")
+	}
+	/// TODO: two overpass chars, one for empty and one for passing over another branch
+	s = tr(s, "ABDO.efg.IKm.xyz.tCMr", "├┤─═.┌┬┐.│┼─.└┴┘.┬├├┴")
 	return s
 }
-func visPost(s, f string) {
+func visPost(s, f string) string {
 	s = visXfrm(s, f != "")
 
 	if f != "" {
-
+		/// TODO: colors here too
 	}
+	return s
 }
