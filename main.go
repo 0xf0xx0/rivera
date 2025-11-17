@@ -388,3 +388,71 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 }
 
 /// beautification
+
+func visFan(s, t string) string {
+	isBranch := t == "branch"
+	r := regexp.MustCompile(`s.*s`)
+	r2 := regexp.MustCompile(`O[DO]+O`)
+	rS1 := regexp.MustCompile(`(s.*)S(.*s)`)
+	rS2 := regexp.MustCompile(`(s.*)S`)
+	rS3 := regexp.MustCompile(`S(.*s)`)
+
+	r.ReplaceAllStringFunc(s, func(s string) string {
+		return strings.ReplaceAll(s, " I", "DO")
+	})
+	r2.ReplaceAllStringFunc(s, func(s string) string {
+		return strings.Repeat("O", len(s))
+	})
+
+	if m := rS1.FindStringSubmatch(s); len(m) > 0 {
+		s = strings.Replace(s, m[0], visFan3(m[1], m[2]), 1)
+	} else if m := rS2.FindStringSubmatch(s); len(m) > 0 {
+		s = strings.Replace(s, m[0], visFan2L(m[1])+"B", 1)
+	} else if m := rS3.FindStringSubmatch(s); len(m) > 0 {
+		s = strings.Replace(s, m[0], "A"+visFan2R(m[1]), 1)
+	} else {
+		panic("FUUUUUCK")
+	}
+
+	if isBranch {
+		s = strings.ReplaceAll(s, "e", "x")
+		s = strings.ReplaceAll(s, "f", "y")
+		s = strings.ReplaceAll(s, "g", "z")
+	}
+	return s
+}
+func visFan2L(l string) string {
+	l = strings.Replace(l, "s", "e", 1)
+	l = strings.ReplaceAll(l, "s", "f")
+	return l
+}
+func visFan2R(r string) string {
+	if r[len(r)-1] == 's' {
+		replaceAt(&r, "g", len(r)-1)
+	}
+	r = strings.ReplaceAll(r, "s", "f")
+	return r
+
+}
+func visFan3(l, r string) string {
+	l = visFan2L(l)
+	r = visFan2R(r)
+	return l + "K" + r
+}
+func visXfrm(s string, spec bool) string {
+	r := regexp.MustCompile(`[Ctr].*`)
+	if spec {
+		s = r.ReplaceAllStringFunc(s, func(s string) string {
+			return strings.ReplaceAll(s, " ", "*")
+		})
+	}
+	/// WIP
+	return s
+}
+func visPost(s, f string) {
+	s = visXfrm(s, f != "")
+
+	if f != "" {
+
+	}
+}
