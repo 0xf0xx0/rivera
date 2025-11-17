@@ -530,7 +530,7 @@ func visXfrm(s string, spec bool) string {
 
 	for idx := range s {
 		if idx%2 == 0 {
-			colorHints[idx] = BRANCH_COLORS[idx/2]
+			colorHints[idx] = getBranchColor(idx/2)
 		}
 	}
 
@@ -542,9 +542,9 @@ func visXfrm(s string, spec bool) string {
 		if offset > 0 {
 			offset /= 2
 		}
-		colorHints[offset] = BRANCH_COLORS[offset]
+		colorHints[offset] = getBranchColor(offset)
 
-		// s = strings.Replace(s, matches[1], oigiki.TagString(matches[1], BRANCH_COLORS[offset]), 1)
+		// s = strings.Replace(s, matches[1], oigiki.TagString(matches[1], getBranchColor(offset)), 1)
 	} else if matches := left2.FindStringSubmatch(s); len(matches) > 0 {
 		offset := strings.Index(s, matches[1])
 		if offset%2 == 1 {
@@ -553,8 +553,8 @@ func visXfrm(s string, spec bool) string {
 		if offset > 0 {
 			offset /= 2
 		}
-		colorHints[offset] = BRANCH_COLORS[offset]
-		// s = strings.Replace(s, matches[1], oigiki.TagString(matches[1], BRANCH_COLORS[offset]), 1)
+		colorHints[offset] = getBranchColor(offset)
+		// s = strings.Replace(s, matches[1], oigiki.TagString(matches[1], getBranchColor(offset)), 1)
 	} else if matches := left3.FindStringSubmatch(s); len(matches) > 0 {
 		idx := strings.Index(s, matches[3])
 		offset := idx
@@ -565,7 +565,7 @@ func visXfrm(s string, spec bool) string {
 			offset /= 2
 		}
 		/// TODO: is this needed?
-		colorHints[idx] = BRANCH_COLORS[offset]
+		colorHints[idx] = getBranchColor(offset)
 	} else if matches := right1.FindStringSubmatch(s); len(matches) > 0 {
 		offset := strings.Index(s, matches[1])
 		if offset%2 == 1 {
@@ -575,7 +575,7 @@ func visXfrm(s string, spec bool) string {
 			offset /= 2
 		}
 		/// FIXME: wrong color (off by +1)
-		colorHints[offset] = BRANCH_COLORS[offset-1]
+		colorHints[offset] = getBranchColor(offset)
 	} else if matches := right2.FindStringSubmatch(s); len(matches) > 0 {
 		offset := strings.Index(s, matches[1])
 		if offset%2 == 1 {
@@ -584,7 +584,7 @@ func visXfrm(s string, spec bool) string {
 		if offset > 0 {
 			offset /= 2
 		}
-		colorHints[offset] = BRANCH_COLORS[offset]
+		colorHints[offset] = getBranchColor(offset)
 	} else if matches := right3.FindStringSubmatch(s); len(matches) > 0 {
 		offset := strings.Index(s, matches[1])
 		if offset%2 == 1 {
@@ -645,4 +645,8 @@ func visPost(s, f string) string {
 		/// TODO: colors here?
 	}
 	return s
+}
+
+func getBranchColor(n int) string {
+	return BRANCH_COLORS[n % len(BRANCH_COLORS)]
 }
