@@ -15,6 +15,7 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/0xf0xx0/oigiki"
 	"github.com/urfave/cli/v3"
 )
 
@@ -25,6 +26,8 @@ const (
 var (
 	lineRegex    = regexp.MustCompile(`^<(.*?)><(.*?)><(.*?)>(.*)`)
 	nextShaRegex = regexp.MustCompile(`^<(.*?)>`)
+	nonEscRegex  = regexp.MustCompile(`^([^\x1b]+)`)
+	escRegex     = regexp.MustCompile(`(\x1b.*?m)([^\x1b]+)`)
 )
 
 var (
@@ -118,6 +121,7 @@ func main() {
 
 func processCommits() error {
 	// refs :=
+	global_commitBuffer = make([]string, 0, 10)
 	vine := make([]string, 0, 8)
 
 	/// TODO: make option
@@ -131,8 +135,6 @@ func processCommits() error {
 		return cli.Exit(err.Error(), 1)
 	}
 	reader := bufio.NewReader(stdout)
-
-	global_commitBuffer = make([]string, 0, 10)
 
 	for {
 		/// TODO: subvineDepth?
@@ -166,14 +168,14 @@ func processCommits() error {
 
 		vineBranch(&vine, sha)
 
-		fmt.Printf("%s %s  ", sha[:config.hashLen], t.Format(DATE_FMT))
+		fmt.Printf(oigiki.ProcessTags("{magenta}%s {blue}%s  "), sha[:config.hashLen], t.Format(DATE_FMT))
 		vineCommit(&vine, sha, parents)
 
 		/// TODO: auto refs, padding
 		if refs != "" {
-			fmt.Printf(" %s%s %s\n", author, refs, message)
+			fmt.Printf(oigiki.ProcessTags(" {yellow}%s%s {/}%s\n"), author, refs, message)
 		} else {
-			fmt.Printf(" %s %s\n", author, message)
+			fmt.Printf(oigiki.ProcessTags(" {yellow}%s {/}%s\n"), author, message)
 		}
 
 		vineMerge(&vine, sha, nextShas, parents)
@@ -184,6 +186,8 @@ func processCommits() error {
 	}
 	return nil
 }
+
+/// layout
 
 func vineBranch(vine *[]string, sha string) {
 	matchedCount := 0
@@ -382,3 +386,37 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 	/// TODO: dynamic
 	fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
 }
+
+/// beautification
+
+func visCommit(s, f string) string {
+	return strings.TrimRight(s, " ") + f
+}
+// func visPost(s, f string) string {
+// 	fDefined := f != ""
+// 	s = visXfrm(s, fDefined)
+
+// 	if fDefined {
+// 		f = nonEscRegex.ReplaceAllStringFunc(f, func(m string) string {
+// 			return visXfrm(m, true)
+// 		})
+
+// 		f = escRegex.ReplaceAllStringFunc(f, func(m string) string {
+// 			parts := escRegex.FindStringSubmatch(m)
+// 			escSeq := parts[1]
+// 			plain := parts[2]
+// 			return escSeq + visXfrm(plain, true)
+// 		})
+
+// 		s = strings.ReplaceAll(s, "*", f)
+
+// 		defaultEsc := regexp.QuoteMeta("\x1b[0m")
+// 		reDef := regexp.MustCompile(defaultEsc)
+// 		s = reDef.ReplaceAllStringFunc(s, func(m string) string {
+// 			return m + "\x1b[32m" /// TODO
+// 		})
+
+// 		// c) Append f to the end of s
+// 		s += f
+// 	}
+// }
