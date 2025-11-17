@@ -24,17 +24,24 @@ const (
 )
 
 // regex
+// TODO: names :\
 var (
 	lineRegex    = regexp.MustCompile(`^<(.*?)><(.*?)><(.*?)>(.*)`)
 	nextShaRegex = regexp.MustCompile(`^<(.*?)>`)
-	nonEscRegex  = regexp.MustCompile(`^([^\x1b]+)`)
-	escRegex     = regexp.MustCompile(`(\x1b.*?m)([^\x1b]+)`)
+	/// fmt pt 1
+	r   = regexp.MustCompile(`(?i)s.*s`)
+	r2  = regexp.MustCompile(`O[DO]+O`)
+	rS1 = regexp.MustCompile(`(s.*)S(.*s)`)
+	rS2 = regexp.MustCompile(`(s.*)S`)
+	rS3 = regexp.MustCompile(`S(.*s)`)
+	/// fmt pt 2
+	colorMatch1 = regexp.MustCompile(`[ABCMefgxyzIKmrt]`)
 )
 
 // global
 var (
 	global_commitBuffer []string
-	BRANCH_COLORS = []string{
+	BRANCH_COLORS       = []string{
 		"red",
 		"blue",
 		"yellow",
@@ -46,7 +53,7 @@ var (
 
 var config = struct {
 	repoPath, branchcolors string
-	hashLen                int
+	hashLen, style         uint8
 	reverse, displayAll    bool
 }{}
 
@@ -75,11 +82,17 @@ func main() {
 				Aliases: []string{"repo", "r"},
 				Value:   ".",
 			},
-			&cli.IntFlag{
+			&cli.Uint8Flag{
 				Name:    "hashlength",
 				Usage:   "`len`gth of the commit hash",
 				Aliases: []string{"l"},
 				Value:   8,
+			},
+			&cli.Uint8Flag{
+				Name:    "style",
+				Usage:   "style `num` to select (1-4)",
+				Aliases: []string{"s"},
+				Value:   1,
 			},
 			&cli.BoolFlag{
 				Name:  "all",
@@ -109,7 +122,8 @@ func main() {
 			config.repoPath = filepath.Join(ctx.String("repository"), "./.git")
 			config.displayAll = ctx.Bool("all")
 			config.reverse = ctx.Bool("reverse")
-			config.hashLen = ctx.Int("hashlength")
+			config.style = ctx.Uint8("style")
+			config.hashLen = ctx.Uint8("hashlength")
 			config.branchcolors = ctx.String("branchcolors")
 
 			//////
@@ -139,7 +153,7 @@ func processCommits() error {
 	cmd := exec.Command("git", "--git-dir="+config.repoPath,
 		"log", "--date-order", "--pretty=format:<%H><%h><%P>"+PRETTY)
 	if config.displayAll {
-		cmd.Args = append(cmd.Args, "--all",  "HEAD")
+		cmd.Args = append(cmd.Args, "--all", "HEAD")
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -200,9 +214,9 @@ func processCommits() error {
 			fmt.Print(ret)
 		}
 	}
-	/// TODO: likely impossible but printing
+
 	if config.reverse {
-		for _,x := range slices.Backward(collectedLines) {
+		for _, x := range slices.Backward(collectedLines) {
 			fmt.Print(x)
 		}
 	}
@@ -246,7 +260,7 @@ func vineBranch(vine *[]string, sha string) string {
 	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
 	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visFan(output, "branch"))
 	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visPost(visFan(output, "branch"), ""))
-	return fmt.Sprintln(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visPost(visFan(output, "branch"), ""))
+	return fmt.Sprintln(strings.Repeat(" ", int(config.hashLen)+len(DATE_FMT)+3) + visPost(visFan(output, "branch"), ""))
 }
 func vineCommit(vine *[]string, sha string, parents []string) string {
 	output := ""
@@ -412,24 +426,17 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) string {
 			replaceAt(&output, " ", i)
 		}
 	}
-	/// TODO: dynamic
 	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
 	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visFan(output, "merge"))
 	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visPost(visFan(output, "merge"), ""))
 	// return ""
-	return fmt.Sprintln(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visPost(visFan(output, "merge"), ""))
+	return fmt.Sprintln(strings.Repeat(" ", int(config.hashLen)+len(DATE_FMT)+3) + visPost(visFan(output, "merge"), ""))
 }
 
 /// beautification
 
 func visFan(s, t string) string {
 	isBranch := t == "branch"
-	/// TODO: cleanup
-	r := regexp.MustCompile(`(?i)s.*s`)
-	r2 := regexp.MustCompile(`O[DO]+O`)
-	rS1 := regexp.MustCompile(`(s.*)S(.*s)`)
-	rS2 := regexp.MustCompile(`(s.*)S`)
-	rS3 := regexp.MustCompile(`S(.*s)`)
 
 	s = r.ReplaceAllStringFunc(s, func(x string) string {
 		return strings.ReplaceAll(strings.ReplaceAll(x, " ", "D"), "I", "O")
@@ -475,55 +482,167 @@ func visFan3(l, r string) string {
 }
 func visXfrm(s string, spec bool) string {
 	/*
-	 NOTE: from original perl:
-		# A: branch to right
-		# B: branch to right
-		# C: commit
-		# M: merge commit
-		# D:
-		# e: merge visual left (╔)
-		# f: merge visual center (╦)
-		# g: merge visual right (╗)
-		# I: straight line (║)
-		# K: branch visual split (╬)
-		# m: single line (─)
-		# O: overpass (≡)
-		# r: root (╙)
-		# t: tip (╓)
-		# x: branch visual left (╚)
-		# y: branch visual center (╩)
-		# z: branch visual right (╝)
-		# *: filler
-	 */
+		 NOTE: from original perl:
+			# A: branch to right
+			# B: branch to left
+			# C: commit
+			# M: merge commit
+			# D: overpass over empty space
+			# e: merge visual left (╔)
+			# f: merge visual center (╦)
+			# g: merge visual right (╗)
+			# I: straight line (║)
+			# K: branch visual split (╬)
+			# m: single line (─)
+			# O: overpass (≡)
+			# r: root (╙)
+			# t: tip (╓)
+			# x: branch visual left (╚)
+			# y: branch visual center (╩)
+			# z: branch visual right (╝)
+			# *: filler
+	*/
 	r := regexp.MustCompile(`[Ctr].*`)
 	if spec {
 		s = r.ReplaceAllStringFunc(s, func(x string) string {
 			return strings.ReplaceAll(x, " ", "*")
 		})
 	}
-	oddPoses := make([]rune, 0, len(s)/2)
-	for i, r := range s {
-		if i%2 == 0 {
-			oddPoses = append(oddPoses, r)
-		}
-	}
-	for _, r := range oddPoses {
-		if r == 'e' || r == 'f' || r == 'g' || r == 't' {
-			/// TODO: ig colors are done here
-		}
-	}
 	if config.reverse {
-		s = tr(s, "efg.xyz","xyz.efg")
+		s = tr(s, "efg.xyz", "xyz.efg")
+		// s = tr(s, "efg.xyz.t","xyz.efg.r")
 	}
+	/*
+		TODO: color entire branches, including bridges
+		matches:
+		x...B, g...I, A(...g) for leftward merge
+		e(...B), z(...I), A...z for rightward merge
+		otherwise color every other line
+	*/
+	left1 := regexp.MustCompile(`(x.*B)`)
+	left2 := regexp.MustCompile(`(g.*I)`)
+	left3 := regexp.MustCompile(`((A)(.*g))`)
+	right1 := regexp.MustCompile(`e(.*B)`)
+	right2 := regexp.MustCompile(`z(.*I)`)
+	right3 := regexp.MustCompile(`(A.*z)`)
+
+	colorHints := make([]string, len(s))
+
+	for idx := range s {
+		if idx%2 == 0 {
+			colorHints[idx] = BRANCH_COLORS[idx/2]
+		}
+	}
+
+	if matches := left1.FindStringSubmatch(s); len(matches) > 0 {
+		offset := strings.Index(s, matches[1])
+		if offset%2 == 1 {
+			offset++
+		}
+		if offset > 0 {
+			offset /= 2
+		}
+		colorHints[offset] = BRANCH_COLORS[offset]
+
+		// s = strings.Replace(s, matches[1], oigiki.TagString(matches[1], BRANCH_COLORS[offset]), 1)
+	} else if matches := left2.FindStringSubmatch(s); len(matches) > 0 {
+		offset := strings.Index(s, matches[1])
+		if offset%2 == 1 {
+			offset++
+		}
+		if offset > 0 {
+			offset /= 2
+		}
+		colorHints[offset] = BRANCH_COLORS[offset]
+		// s = strings.Replace(s, matches[1], oigiki.TagString(matches[1], BRANCH_COLORS[offset]), 1)
+	} else if matches := left3.FindStringSubmatch(s); len(matches) > 0 {
+		idx := strings.Index(s, matches[3])
+		offset := idx
+		if offset%2 == 1 {
+			offset++
+		}
+		if offset > 0 {
+			offset /= 2
+		}
+		/// TODO: is this needed?
+		colorHints[idx] = BRANCH_COLORS[offset]
+	} else if matches := right1.FindStringSubmatch(s); len(matches) > 0 {
+		offset := strings.Index(s, matches[1])
+		if offset%2 == 1 {
+			offset++
+		}
+		if offset > 0 {
+			offset /= 2
+		}
+		/// FIXME: wrong color (off by +1)
+		colorHints[offset] = BRANCH_COLORS[offset-1]
+	} else if matches := right2.FindStringSubmatch(s); len(matches) > 0 {
+		offset := strings.Index(s, matches[1])
+		if offset%2 == 1 {
+			offset++
+		}
+		if offset > 0 {
+			offset /= 2
+		}
+		colorHints[offset] = BRANCH_COLORS[offset]
+	} else if matches := right3.FindStringSubmatch(s); len(matches) > 0 {
+		offset := strings.Index(s, matches[1])
+		if offset%2 == 1 {
+			offset++
+		}
+		if offset > 0 {
+			offset /= 2
+		}
+		/// NOTE: A...z inherits only the base color, so zero-out the slice starting at `offset`
+		for idx := offset; idx < len(colorHints); idx++ {
+			if idx == 0 {
+				/// leave the default color
+				continue
+			}
+			colorHints[idx] = ""
+		}
+	}
+
+	// fmt.Println(oigiki.ProcessTags(s))
+	/// TODO: styles
 	/// TODO: two overpass chars, one for empty and one for passing over another branch
-	s = tr(s, "ABDO.efg.IKm.xyz.tCMr", "├┤─═.┌┬┐.│┼─.└┴┘.┬├├┴")
-	return s
+	switch config.style {
+	case 1:
+		{
+			s = tr(s, "ABDO.efg.IKm.xyz.tCMr", "├┤─═.┌┬┐.│┼─.└┴┘.┬├├┴")
+		}
+	case 2:
+		{
+			s = tr(s, "ABDO.efg.IKm.xyz.tCMr", "╠╣══.╔╦╗.║╬─.╚╩╝.╦║║╩")
+		}
+	/// idk why the perk used 10 and 15 like ???
+	case 3:
+		{
+			s = tr(s, "ABDO.efg.IKm.xyz.tCMr", "├┤──.╭┬╮.│┼─.╰┴╯.┬├├┴")
+		}
+	case 4:
+		{
+			s = tr(s, "ABDO.efg.IKm.xyz.tCMr", "┣┫━━.┏┳┓.┃╋━.┗┻┛.┳┣┣┻")
+		}
+	}
+
+	sb := strings.Builder{}
+	for idx, c := range []rune(s) {
+		if colorHints[idx] != "" {
+			sb.WriteString("{")
+			sb.WriteString(colorHints[idx])
+			sb.WriteString("}")
+		}
+		sb.WriteRune(c)
+	}
+
+	return oigiki.ProcessTags(sb.String())
 }
 func visPost(s, f string) string {
 	s = visXfrm(s, f != "")
 
 	if f != "" {
-		/// TODO: colors here too
+		/// TODO: colors here?
 	}
 	return s
 }
