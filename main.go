@@ -385,6 +385,7 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) {
 	}
 	/// TODO: dynamic
 	fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
+	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visFan(output, "merge"))
 }
 
 /// beautification
