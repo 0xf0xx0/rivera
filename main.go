@@ -219,7 +219,7 @@ func processCommits() error {
 
 		ret := vineBranch(&vine, sha)
 
-		ret += fmt.Sprintf(oigiki.ProcessTags("{magenta}%s {blue}%s%s"), sha[:config.hashLen], t.Format(DATE_FMT),strings.Repeat(" ", int(config.leftMargin)))
+		ret += fmt.Sprintf(oigiki.ProcessTags("{magenta}%s {blue}%s%s"), sha[:config.hashLen], t.Format(DATE_FMT), strings.Repeat(" ", int(config.leftMargin)))
 
 		ret += vineCommit(&vine, sha, parents)
 
@@ -513,7 +513,7 @@ func visFan3(l, r string) string {
 //
 // furst, every column is given a color based on its index
 //
-// then, the regex is matched and the colors are updated before being turned into
+// then, the patterns are matched and the colors are updated and written before being turned into
 // graph chars and returned
 func visXfrm(line string) string {
 	/*
@@ -538,11 +538,13 @@ func visXfrm(line string) string {
 			# *: filler
 	*/
 	if config.reverse {
-		line = tr(line, "efg.xyz", "xyz.efg")
-		// s = tr(s, "efg.xyz.t","xyz.efg.r")
+		line = tr(line, "efg.xyz.t", "xyz.efg.r")
+		/// TODO: option to not flip tip and root char?
+		// line = tr(line, "efg.xyz", "xyz.efg")
 	}
 	/*
-		color entire branches, including bridges
+		color entire branches, including overpasses
+		characters inside (groups) are colored differently
 		x...B, g...I, A(...g) for leftward merge
 		e(...B), z(...I), A...z for rightward merge
 		otherwise color every other line
@@ -559,31 +561,15 @@ func visXfrm(line string) string {
 
 	/// update the colors with regex
 	if matches := leftxB.FindStringSubmatch(line); len(matches) > 0 {
-		offset := strings.Index(line, matches[1])
-		if offset%2 == 1 {
-			offset++
-		}
-		if offset > 0 {
-			offset /= 2
-		}
+		offset := offsetHelper(strings.Index(line, matches[1]))
 		colorHints[offset] = getBranchColor(offset)
 	} else if matches := leftgI.FindStringSubmatch(line); len(matches) > 0 {
-		offset := strings.Index(line, matches[1])
-		if offset%2 == 1 {
-			offset++
-		}
-		if offset > 0 {
-			offset /= 2
-		}
+		offset := offsetHelper(strings.Index(line, matches[1]))
 		colorHints[offset] = getBranchColor(offset)
 	} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
-		offset := strings.Index(line, matches[1])
-		if offset%2 == 1 {
-			offset++
-		}
-		if offset > 0 {
-			offset /= 2
-		}
+		offset := offsetHelper(strings.Index(line, matches[1]))
+		/// colorHints needs clearing, the source branch color (right)
+		/// needs to run all the way until it hits the branch color set above
 		for idx := offset; idx < offset+len(matches[1]); idx++ {
 			if idx == 0 {
 				/// leave the default color
@@ -593,13 +579,8 @@ func visXfrm(line string) string {
 		}
 		colorHints[offset] = getBranchColor(offset - 1)
 	} else if matches := rightzI.FindStringSubmatch(line); len(matches) > 0 {
-		offset := strings.Index(line, matches[1])
-		if offset%2 == 1 {
-			offset++
-		}
-		if offset > 0 {
-			offset /= 2
-		}
+		offset := offsetHelper(strings.Index(line, matches[1]))
+		/// TODO: none of my repos have a z...I, does this also need to clear colorHints?
 		colorHints[offset] = getBranchColor(offset)
 	}
 	/// the overpasses needs to be done separately because the regexes above may overlap
@@ -681,6 +662,17 @@ func visXfrm(line string) string {
 	}
 
 	return oigiki.ProcessTags(sb.String())
+}
+
+// reducing repetition, just ensures offset is %2 before halving
+func offsetHelper(offset int) int {
+	if offset%2 == 1 {
+		offset++
+	}
+	if offset > 0 {
+		offset /= 2
+	}
+	return offset
 }
 
 func visPost(line string) string {
