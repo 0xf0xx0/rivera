@@ -82,7 +82,7 @@ func main() {
 			&cli.StringFlag{
 				Name:    "repository",
 				Usage:   "repository `path` to use",
-				Aliases: []string{"repo", "r"},
+				Aliases: []string{"repo"},
 				Value:   ".",
 			},
 			&cli.Uint8Flag{
@@ -128,6 +128,7 @@ func main() {
 			&cli.BoolFlag{
 				Name:  "reverse",
 				Usage: "reverse the flow",
+				Aliases: []string{"r"},
 				Value: false,
 			},
 			&cli.StringFlag{
