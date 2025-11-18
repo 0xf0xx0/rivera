@@ -1,7 +1,6 @@
 // git-河流
 //
 // pretty git-log ported from git-forest(a)
-//
 package main
 
 import (
@@ -126,10 +125,10 @@ func main() {
 				Value: false,
 			},
 			&cli.BoolFlag{
-				Name:  "reverse",
-				Usage: "reverse the flow",
+				Name:    "reverse",
+				Usage:   "reverse the flow",
 				Aliases: []string{"r"},
-				Value: false,
+				Value:   false,
 			},
 			&cli.StringFlag{
 				Name:  "branchcolors",
@@ -180,21 +179,27 @@ func processCommits() error {
 	/// TODO: make option...?
 	/// this might be something im too lazy to do
 	PRETTY := "%H\t%at\t%an\t%C(reset)%C(auto)%d%C(reset)\t%s"
+
 	cmd := exec.Command("git", "--git-dir="+config.repoPath,
 		"log", "--date-order", "--pretty=format:<%H><%h><%P>"+PRETTY)
 	if config.displayAll {
 		cmd.Args = append(cmd.Args, "--all", "HEAD")
 	}
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return cli.Exit(err.Error(), 1)
 	}
+
 	if err := cmd.Start(); err != nil {
 		return cli.Exit(err.Error(), 1)
 	}
 	reader := bufio.NewReader(stdout)
 
-	collectedLines := make([]string, 0, 128)
+	collectedLines := []string{}
+	if config.reverse {
+		collectedLines = make([]string, 0, 128)
+	}
 	for {
 		lines, err := getLineBlock(reader, int(config.subvineDepth))
 		if err != nil {
@@ -203,14 +208,17 @@ func processCommits() error {
 		if len(lines) == 0 {
 			break
 		}
+
 		line := strings.TrimSpace(lines[0])
 		if line == "" {
 			break
 		}
+
 		nextLines := []string{}
 		if len(lines) > 1 {
 			nextLines = lines[1:]
 		}
+
 		nextShas := make([]string, 0, len(nextLines))
 		for idx := range nextLines {
 			matches := nextShaRegex.FindStringSubmatch(nextLines[idx])
@@ -219,27 +227,29 @@ func processCommits() error {
 			}
 			nextShas = append(nextShas, matches[1])
 		}
+
 		sha, _, msg, parents := parseLine(line)
 		_, t, author, refs, message := splitMessage(msg)
 
-		ret := vineBranch(&vine, sha)
+		ret := strings.Builder{}
+		ret.Grow(80)
+		ret.WriteString(vineBranch(&vine, sha))
 
-		ret += fmt.Sprintf(oigiki.ProcessTags("{magenta}%s {blue}%s%s"), sha[:config.hashLen], t.Format(DATE_FMT), strings.Repeat(" ", int(config.leftMargin)))
+		ret.WriteString(fmt.Sprintf(oigiki.ProcessTags("{magenta}%s {blue}%s%s"),
+			sha[:config.hashLen], t.Format(DATE_FMT), strings.Repeat(" ", int(config.leftMargin)),
+		))
 
-		ret += vineCommit(&vine, sha, parents)
+		ret.WriteString(vineCommit(&vine, sha, parents))
 
 		/// TODO: auto refs
-		if refs != "" {
-			ret += fmt.Sprintf(oigiki.ProcessTags("%s{yellow}%s%s {/}%s\n"), strings.Repeat(" ", int(config.rightMargin)), author, refs, message)
-		} else {
-			ret += fmt.Sprintf(oigiki.ProcessTags("%s{yellow}%s {/}%s\n"), strings.Repeat(" ", int(config.rightMargin)), author, message)
-		}
+		ret.WriteString(fmt.Sprintf(oigiki.ProcessTags("%s{yellow}%s%s{/}%s\n"),
+			strings.Repeat(" ", int(config.rightMargin)), author, refs, message))
 
 		if config.reverse {
-			collectedLines = append(collectedLines, ret)
+			collectedLines = append(collectedLines, ret.String())
 			collectedLines = append(collectedLines, vineMerge(&vine, sha, nextShas, parents))
 		} else {
-			ret += vineMerge(&vine, sha, nextShas, parents)
+			ret.WriteString(vineMerge(&vine, sha, nextShas, parents))
 			fmt.Print(ret)
 		}
 	}
@@ -261,21 +271,22 @@ func processCommits() error {
 func vineBranch(vine *[]string, sha string) string {
 	matchedCount := 0
 	masterDrawn := false
-	output := ""
+	output := strings.Builder{}
+	output.Grow(len(*vine))
 
 	for columnIndex := range *vine {
 		if (*vine)[columnIndex] == "" {
-			output += " "
+			output.WriteRune(' ')
 		} else if (*vine)[columnIndex] != sha {
-			output += "I" // Straight line (other branch continues)
+			output.WriteRune('I') // Straight line (other branch continues)
 		} else {
-			// This column points to our commit
+			/// This column points to our commit
 			if !masterDrawn && columnIndex%2 == 0 {
-				output += "S" // Main branch split
+				output.WriteRune('S') /// Main branch split
 				masterDrawn = true
 			} else {
-				output += "s"             // Secondary branch split
-				(*vine)[columnIndex] = "" // Clear
+				output.WriteRune('s')     /// Secondary branch split
+				(*vine)[columnIndex] = "" /// Clear
 			}
 			matchedCount++
 		}
@@ -285,14 +296,11 @@ func vineBranch(vine *[]string, sha string) string {
 		return ""
 	}
 	removeTrailingBlanks(vine)
-	// +2 for spaces between
-	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
-	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visFan(output, "branch"))
-	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visPost(visFan(output, "branch"), ""))
-	return fmt.Sprintln(strings.Repeat(" ", int(config.hashLen)+len(DATE_FMT)+3) + visPost(visFan(output, "branch")))
+	/// +1 for space between hash and date
+	return fmt.Sprintln(strings.Repeat(" ", int(config.hashLen)+1+len(DATE_FMT)+int(config.leftMargin)) + visPost(visFan(output.String(), "branch")))
 }
 func vineCommit(vine *[]string, sha string, parents []string) string {
-	output := ""
+	output := "" /// its too much of a pain to use strings.Builder here
 
 	for columnIndex := range *vine {
 		if (*vine)[columnIndex] == "" {
@@ -307,6 +315,7 @@ func vineCommit(vine *[]string, sha string, parents []string) string {
 		i := 0
 		for i = roundDown2(len(*vine) - 1); i >= 0; i -= 2 {
 			if output[i] == ' ' {
+				/// tip
 				replaceAt(&output, "t", i)
 				(*vine)[i] = sha
 				break
@@ -317,26 +326,27 @@ func vineCommit(vine *[]string, sha string, parents []string) string {
 				output += " "
 				*vine = append(*vine, "")
 			}
+			/// also tip
 			output += "t"
 			*vine = append(*vine, sha)
 		}
 	}
-	// println(fmt.Printf("vine: %q %d", *vine, len(*vine)))
 
 	removeTrailingBlanks(vine)
 
 	if len(parents) == 0 {
+		/// root
 		output = strings.Replace(output, "C", "r", 1)
 	} else if len(parents) > 1 {
+		/// merge
 		output = strings.Replace(output, "C", "M", 1)
 	}
-	// fmt.Print(output)
-	// fmt.Print(visPost(output, ""))
+
 	return visPost(output)
 }
 func vineMerge(vine *[]string, sha string, nextShas, parents []string) string {
 	originalColumn := -1
-	output := ""
+	output := "" /// ditto
 	slot := make([]int, 0, 8)
 
 	for idx := range *vine {
@@ -455,10 +465,6 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) string {
 			replaceAt(&output, " ", i)
 		}
 	}
-	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + output)
-	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visFan(output, "merge"))
-	// fmt.Println(strings.Repeat(" ", config.hashLen+len(DATE_FMT)+3) + visPost(visFan(output, "merge"), ""))
-	// return ""
 	return fmt.Sprintln(strings.Repeat(" ", int(config.hashLen)+len(DATE_FMT)+3) + visPost(visFan(output, "merge")))
 }
 

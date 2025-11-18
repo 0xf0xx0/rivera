@@ -73,7 +73,6 @@ func roundDown2(n int) int {
 }
 func strExpand(s *string, l int) {
 	x := l - len(*s)
-	// println("expand: ", l, x)
 	if x > 0 {
 		(*s) += strings.Repeat(" ", x)
 	}
