@@ -569,59 +569,29 @@ func visXfrm(line string) string {
 	} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
 		offset := offsetHelper(strings.Index(line, matches[1]))
 		/// colorHints needs clearing, the source branch color (right)
-		/// needs to run all the way until it hits the branch color set above
-		for idx := offset; idx < offset+len(matches[1]); idx++ {
-			if idx == 0 {
-				/// leave the default color
-				continue
-			}
-			colorHints[idx] = ""
-		}
+		/// needs to run all the way until it hits the target branch color
+		clearColorHintsUnderMatch(offset, matches[1], &colorHints)
 		colorHints[offset] = getBranchColor(offset - 1)
 	} else if matches := rightzI.FindStringSubmatch(line); len(matches) > 0 {
 		offset := offsetHelper(strings.Index(line, matches[1]))
 		/// TODO: none of my repos have a z...I, does this also need to clear colorHints?
 		colorHints[offset] = getBranchColor(offset)
 	}
+
 	/// the overpasses needs to be done separately because the regexes above may overlap
-	/// FIXME: better regex?
-	/// NOTE: overpasses inherits only the base color, so we zero-out colorHints over the length of the match
+	/// NOTE: overpasses inherit only the base color, so we zero-out colorHints over the length of the match
 	if matches := leftAg.FindStringSubmatch(line); len(matches) > 0 {
 		idx := strings.Index(line, matches[1])
-		offset := idx
-		if offset%2 == 1 {
-			offset++
-		}
-		if offset > 0 {
-			offset /= 2
-		}
-		for i := idx; i < idx+len(matches[1]); i++ {
-			if i == 0 {
-				/// leave the default color
-				continue
-			}
-			colorHints[i] = ""
-		}
+		offset := offsetHelper(idx)
+		clearColorHintsUnderMatch(idx, matches[1], &colorHints)
 		/// color the section (minus the A)
 		colorHints[idx] = getBranchColor((idx + len(matches[1])) / 2)
 		/// color the "A"
 		colorHints[idx-1] = getBranchColor(offset - 1)
 	} else if matches := rightAz.FindStringSubmatch(line); len(matches) > 0 {
 		idx := strings.Index(line, matches[1])
-		offset := idx
-		if offset%2 == 1 {
-			offset++
-		}
-		if offset > 0 {
-			offset /= 2
-		}
-		for i := idx; i < idx+len(matches[1]); i++ {
-			if i == 0 {
-				/// leave the default color
-				continue
-			}
-			colorHints[i] = ""
-		}
+		offset := offsetHelper(idx)
+		clearColorHintsUnderMatch(idx, matches[1], &colorHints)
 		colorHints[idx] = getBranchColor(offset)
 	}
 
@@ -662,6 +632,16 @@ func visXfrm(line string) string {
 	}
 
 	return oigiki.ProcessTags(sb.String())
+}
+
+func clearColorHintsUnderMatch(idx int, match string, colorHints *[]string) {
+	for i := idx; i < idx+len(match); i++ {
+		if i == 0 {
+			/// leave the default color
+			continue
+		}
+		(*colorHints)[i] = ""
+	}
 }
 
 // reducing repetition, just ensures offset is %2 before halving
