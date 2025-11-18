@@ -250,15 +250,9 @@ func processCommits() error {
 
 		ret.WriteString(fmt.Sprintf("%s{yellow}%s",
 			strings.Repeat(" ", int(config.rightMargin)), author))
-		if refs, ok := refMap[sha]; ok {
-			if slices.Contains(refs, "HEAD") {
-				autoRefs = strings.Replace(autoRefs, "HEAD", "HEAD"+status, 1)
-			}
-			for ref := range refs {
-				if strings.HasPrefix(refs[ref], "refs/tags/") {
-					refs[ref] = strings.Replace(refs[ref], "refs/tags/", oigiki.TagString("tag:{/magenta} ", "magenta"), 1)
-				}
-			}
+		if _, ok := refMap[sha]; ok {
+			autoRefs = strings.Replace(autoRefs, "HEAD", "HEAD"+status, 1)
+			autoRefs = strings.ReplaceAll(autoRefs, "tag:", "{magenta}tag:{/magenta}")
 			autoRefs = " " + autoRefs
 		}
 		ret.WriteString(autoRefs)
@@ -266,11 +260,11 @@ func processCommits() error {
 		ret.WriteString(message)
 		ret.WriteRune('\n')
 
+		ret.WriteString(vineMerge(&vine, sha, nextShas, parents))
+
 		if config.reverse {
 			collectedLines = append(collectedLines, oigiki.ProcessTags(ret.String()))
-			collectedLines = append(collectedLines, oigiki.ProcessTags(vineMerge(&vine, sha, nextShas, parents)))
 		} else {
-			ret.WriteString(vineMerge(&vine, sha, nextShas, parents))
 			fmt.Print(oigiki.ProcessTags(ret.String()))
 		}
 	}
