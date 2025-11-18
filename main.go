@@ -35,12 +35,12 @@ var (
 	fanLMRegex    = regexp.MustCompile(`(s.*)S`)
 	fanMRRegex    = regexp.MustCompile(`S(.*s)`)
 	/// fmt pt 2
-	leftxB  = regexp.MustCompile(`(x.*B)`)
-	leftgI  = regexp.MustCompile(`(g.*I)`)
-	leftAg  = regexp.MustCompile(`A(.*g)`)
-	righteB = regexp.MustCompile(`e(.*B)`)
-	rightzI = regexp.MustCompile(`z(.*I)`)
-	rightAz = regexp.MustCompile(`(A.*z)`)
+	leftxB  = regexp.MustCompile(`(x\w*B)`)
+	leftgI  = regexp.MustCompile(`(g\w*I)`)
+	leftAg  = regexp.MustCompile(`A(\w*g)`)
+	righteB = regexp.MustCompile(`e(\w*B)`)
+	rightzI = regexp.MustCompile(`z(\w*I)`)
+	rightAz = regexp.MustCompile(`(A\w*z)`)
 )
 
 // global
