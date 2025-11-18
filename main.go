@@ -1,3 +1,7 @@
+// git-河流
+//
+// pretty git-log ported from git-forest(a)
+//
 package main
 
 import (
@@ -24,16 +28,15 @@ const (
 )
 
 // regex
-// TODO: names :\
 var (
 	lineRegex    = regexp.MustCompile(`^<(.*?)><(.*?)><(.*?)>(.*)`)
 	nextShaRegex = regexp.MustCompile(`^<(.*?)>`)
 	/// fmt pt 1
 	overpassRegex = regexp.MustCompile(`O[DO]+O`)
 	fanRegex      = regexp.MustCompile(`(?i)s.*s`)
-	fanLMRRegex   = regexp.MustCompile(`(s.*)S(.*s)`)
-	fanLMRegex    = regexp.MustCompile(`(s.*)S`)
-	fanMRRegex    = regexp.MustCompile(`S(.*s)`)
+	fanLMR        = regexp.MustCompile(`(s.*)S(.*s)`)
+	fanLM         = regexp.MustCompile(`(s.*)S`)
+	fanMR         = regexp.MustCompile(`S(.*s)`)
 	/// fmt pt 2
 	leftxB  = regexp.MustCompile(`(x\w*B)`)
 	leftgI  = regexp.MustCompile(`(g\w*I)`)
@@ -173,7 +176,8 @@ func processCommits() error {
 	global_commitBuffer = make([]string, 0, config.subvineDepth*32)
 	vine := make([]string, 0, config.subvineDepth)
 
-	/// TODO: make option
+	/// TODO: make option...?
+	/// this might be something im too lazy to do
 	PRETTY := "%H\t%at\t%an\t%C(reset)%C(auto)%d%C(reset)\t%s"
 	cmd := exec.Command("git", "--git-dir="+config.repoPath,
 		"log", "--date-order", "--pretty=format:<%H><%h><%P>"+PRETTY)
@@ -459,33 +463,34 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) string {
 
 /// beautification
 
-func visFan(s, t string) string {
-	isBranch := t == "branch"
+func visFan(line, visType string) string {
+	isBranch := visType == "branch"
 
-	s = fanRegex.ReplaceAllStringFunc(s, func(x string) string {
-		return strings.ReplaceAll(strings.ReplaceAll(x, " ", "D"), "I", "O")
+	/// build the overpass, if applicable
+	line = fanRegex.ReplaceAllStringFunc(line, func(match string) string {
+		return tr(match, " I", "DO")
 	})
 	/// TODO: remove? make an option?
 	// s = overpassRegex.ReplaceAllStringFunc(s, func(x string) string {
 	// 	return strings.Repeat("O", len(x))
 	// })
 
-	if m := fanLMRRegex.FindStringSubmatch(s); len(m) > 0 {
-		s = strings.Replace(s, m[0], visFan3(m[1], m[2]), 1)
-	} else if m := fanLMRegex.FindStringSubmatch(s); len(m) > 0 {
-		s = strings.Replace(s, m[0], visFan2L(m[1])+"B", 1)
-	} else if m := fanMRRegex.FindStringSubmatch(s); len(m) > 0 {
-		s = strings.Replace(s, m[0], "A"+visFan2R(m[1]), 1)
+	/// match the various fan patterns
+	if matches := fanLMR.FindStringSubmatch(line); len(matches) > 0 {
+		line = strings.Replace(line, matches[0], visFan3(matches[1], matches[2]), 1)
+	} else if matches := fanLM.FindStringSubmatch(line); len(matches) > 0 {
+		line = strings.Replace(line, matches[0], visFan2L(matches[1])+"B", 1)
+	} else if matches := fanMR.FindStringSubmatch(line); len(matches) > 0 {
+		line = strings.Replace(line, matches[0], "A"+visFan2R(matches[1]), 1)
 	} else {
 		panic("FUUUUUCK")
 	}
 
+	/// replace with the branch chars
 	if isBranch {
-		s = strings.ReplaceAll(s, "e", "x")
-		s = strings.ReplaceAll(s, "f", "y")
-		s = strings.ReplaceAll(s, "g", "z")
+		line = tr(line, "efg", "xyz")
 	}
-	return s
+	return line
 }
 func visFan2L(l string) string {
 	l = strings.Replace(l, "s", "e", 1)
@@ -500,9 +505,11 @@ func visFan2R(r string) string {
 	return r
 }
 func visFan3(l, r string) string {
-	l = visFan2L(l)
-	r = visFan2R(r)
-	return l + "K" + r
+	sb := strings.Builder{}
+	sb.WriteString(visFan2L(l))
+	sb.WriteRune('K')
+	sb.WriteString(visFan2L(r))
+	return sb.String()
 }
 
 // this func is kinda dumb and needs a refactor
