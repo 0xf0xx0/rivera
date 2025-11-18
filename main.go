@@ -171,10 +171,17 @@ func main() {
 }
 
 func processCommits() error {
-	// refs :=
 	/// NOTE: getLineBlock inches the slice along, ensure the backing array has enough capacity
 	global_commitBuffer = make([]string, 0, config.subvineDepth*32)
 	vine := make([]string, 0, config.subvineDepth)
+	refMap, err := getRefs()
+	if err != nil {
+		return cli.Exit(err.Error(), 1)
+	}
+	status, err := getStatus()
+	if err != nil {
+		return cli.Exit(err.Error(), 1)
+	}
 
 	/// TODO: make option...?
 	/// this might be something im too lazy to do
@@ -229,28 +236,42 @@ func processCommits() error {
 		}
 
 		sha, _, msg, parents := parseLine(line)
-		_, t, author, refs, message := splitMessage(msg)
+		_, t, author, autoRefs, message := splitMessage(msg)
 
 		ret := strings.Builder{}
-		ret.Grow(80)
+		ret.Grow(256)
 		ret.WriteString(vineBranch(&vine, sha))
 
-		ret.WriteString(fmt.Sprintf(oigiki.ProcessTags("{magenta}%s {blue}%s%s"),
+		ret.WriteString(fmt.Sprintf("{magenta}%s {blue}%s%s",
 			sha[:config.hashLen], t.Format(DATE_FMT), strings.Repeat(" ", int(config.leftMargin)),
 		))
 
 		ret.WriteString(vineCommit(&vine, sha, parents))
 
-		/// TODO: auto refs
-		ret.WriteString(fmt.Sprintf(oigiki.ProcessTags("%s{yellow}%s%s{/}%s\n"),
-			strings.Repeat(" ", int(config.rightMargin)), author, refs, message))
+		ret.WriteString(fmt.Sprintf("%s{yellow}%s",
+			strings.Repeat(" ", int(config.rightMargin)), author))
+		if refs, ok := refMap[sha]; ok {
+			if slices.Contains(refs, "HEAD") {
+				autoRefs = strings.Replace(autoRefs, "HEAD", "HEAD"+status, 1)
+			}
+			for ref := range refs {
+				if strings.HasPrefix(refs[ref], "refs/tags/") {
+					refs[ref] = strings.Replace(refs[ref], "refs/tags/", oigiki.TagString("tag:{/magenta} ", "magenta"), 1)
+				}
+			}
+			autoRefs = " " + autoRefs
+		}
+		ret.WriteString(autoRefs)
+		ret.WriteString("{/} ")
+		ret.WriteString(message)
+		ret.WriteRune('\n')
 
 		if config.reverse {
-			collectedLines = append(collectedLines, ret.String())
-			collectedLines = append(collectedLines, vineMerge(&vine, sha, nextShas, parents))
+			collectedLines = append(collectedLines, oigiki.ProcessTags(ret.String()))
+			collectedLines = append(collectedLines, oigiki.ProcessTags(vineMerge(&vine, sha, nextShas, parents)))
 		} else {
 			ret.WriteString(vineMerge(&vine, sha, nextShas, parents))
-			fmt.Print(ret)
+			fmt.Print(oigiki.ProcessTags(ret.String()))
 		}
 	}
 
@@ -264,6 +285,107 @@ func processCommits() error {
 		return cli.Exit(err.Error(), 1)
 	}
 	return nil
+}
+
+func getRefs() (map[string][]string, error) {
+	m := make(map[string][]string, 32)
+	cmd := exec.Command("git", "--git-dir="+config.repoPath, "show-ref")
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return m, cli.Exit(err.Error(), 1)
+	}
+	if err := cmd.Start(); err != nil {
+		return m, cli.Exit(err.Error(), 1)
+	}
+	reader := bufio.NewScanner(stdout)
+	for reader.Scan() {
+		line := reader.Text()
+		split := strings.Split(line, " ")
+		if _, ok := m[split[0]]; !ok {
+			m[split[0]] = make([]string, 0, 3)
+		}
+		m[split[0]] = append(m[split[0]], split[1])
+	}
+	if err := cmd.Wait(); err != nil {
+		return m, cli.Exit(err.Error(), 1)
+	}
+
+	/// TODO: the rest of the rebaes stuff
+	return m, nil
+}
+func getStatus() (string, error) {
+	dirty := ""
+	midFlow := ""
+
+	hasChangeUnstagedCmd := exec.Command("git", "--git-dir="+config.repoPath, "diff", "--shortstat")
+	hasChangeStagedCmd := exec.Command("git", "--git-dir="+config.repoPath, "diff", "--shortstat", "--cached")
+	hasStashCmd := exec.Command("git", "--git-dir="+config.repoPath, "stash", "list")
+	hasUntrackedCmd := exec.Command("git", "--git-dir="+config.repoPath, "ls-files", "--others", "--exclude-standard")
+
+	x, err := hasChangeUnstagedCmd.Output()
+	if err != nil {
+		return "", err
+	}
+	/// unstaged
+	if len(x) > 0 {
+		dirty += "*"
+	}
+
+	x, err = hasChangeStagedCmd.Output()
+	if err != nil {
+		return "", err
+	}
+	/// staged
+	if len(x) > 0 {
+		dirty += "+"
+	}
+
+	x, err = hasStashCmd.Output()
+	if err != nil {
+		return "", err
+	}
+	/// stash exists
+	if len(x) > 0 {
+		dirty += "$"
+	}
+
+	x, err = hasUntrackedCmd.Output()
+	if err != nil {
+		return "", err
+	}
+	/// untracked
+	if len(x) > 0 {
+		dirty += "%"
+	}
+	if len(dirty) > 1 {
+		dirty = " " + dirty
+	}
+
+	/// midflow
+	if fileExists("/rebase-merge") {
+		if fileExists("/rebase-merge/interactive") {
+			midFlow = "|REBASE-i"
+		} else {
+			midFlow = "|REBASE-m"
+		}
+	} else if fileExists("/rebase-apply") {
+		if fileExists("/rebase-apply/rebasing") {
+			midFlow = "|REBASE"
+		} else if fileExists("/rebase-apply/applying") {
+			midFlow = "|AM"
+		} else {
+			midFlow = "|AM/REBASE"
+		}
+	} else if fileExists("/MERGE_HEAD") {
+		midFlow = "|MERGING"
+	} else if fileExists("/CHERRY_PICK_HEAD") {
+		midFlow = "|CHERRY-PICKING"
+	} else if fileExists("/REVERT_HEAD") {
+		midFlow = "|REVERTING"
+	} else if fileExists("/BISECT_LOG") {
+		midFlow = "|BISECTING"
+	}
+	return dirty + midFlow, nil
 }
 
 /// layout
@@ -645,7 +767,7 @@ func visXfrm(line string) string {
 		sb.WriteRune(c)
 	}
 
-	return oigiki.ProcessTags(sb.String())
+	return sb.String()
 }
 
 func clearColorHintsUnderMatch(idx int, match string, colorHints *[]string) {

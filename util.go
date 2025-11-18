@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"errors"
 	"io"
+	"io/fs"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -89,6 +91,11 @@ func removeTrailingBlanks(vine *[]string) {
 }
 func cleanLine(l string) string {
 	return strings.Trim(l, "\r\n\t")
+}
+
+func fileExists(path string) bool {
+	_, err := fs.Stat(os.DirFS(config.repoPath), path)
+	return err == nil
 }
 
 // useful func generated while throwing perl at gpt-oss
