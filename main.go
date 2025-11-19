@@ -707,11 +707,11 @@ func visXfrm(line string) string {
 			/// needs to run all the way until it hits the target branch color
 			/// if the x is on an odd column it inherits the color automatically
 			clearColorHintsUnderMatch(offset, matches[1], &colorHints)
-			if idx %2 == 0 {
+			if idx%2 == 0 {
 				colorHints[offset] = getBranchColor(offset)
 				colorHints[idx+1] = getBranchColor((idx + len(matches[1])) / 2)
 			} else {
-				colorHints[offset] = getBranchColor(offset-1)
+				colorHints[offset] = getBranchColor(offset - 1)
 				colorHints[idx+len(matches[1])-1] = getBranchColor((idx + len(matches[1])) / 2)
 			}
 		} else if matches := leftgI.FindStringSubmatch(line); len(matches) > 0 {
@@ -765,11 +765,14 @@ func visXfrm(line string) string {
 
 		if matches := leftAg.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
-			offset := offsetHelper(idx)
-			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
+			offset := offsetHelper(idx - 1)
 
-			colorHints[idx] = getBranchColor((idx + len(matches[1])) / 2)
-			colorHints[idx-1] = getBranchColor(offset - 1)
+			/// we take the index of `g` to get the correct color
+			overpassIdx := idx + len(matches[1])
+			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
+			colorHints[idx] = getBranchColor(overpassIdx/2)
+			colorHints[idx] = getBranchColor(offsetHelper(overpassIdx-1))
+			colorHints[idx-1] = getBranchColor(offset)
 		} else if matches := rightAz.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
 			offset := offsetHelper(idx)
@@ -777,7 +780,6 @@ func visXfrm(line string) string {
 
 			colorHints[idx] = getBranchColor(offset)
 		}
-
 	}
 
 	/// now replace with graph chars

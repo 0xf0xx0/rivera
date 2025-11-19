@@ -8,3 +8,4 @@
 
 ## todo
 - finish compat
+- fix merge commit in reverse
