@@ -172,7 +172,9 @@ func main() {
 
 func processCommits() error {
 	/// NOTE: getLineBlock inches the slice along, ensure the backing array has enough capacity
+	/// the buffer stores the noxt commits to look at and is filled by getLineBlock
 	global_commitBuffer = make([]string, 0, config.subvineDepth*32)
+	/// each vine is a git branch
 	vine := make([]string, 0, config.subvineDepth)
 	refMap, err := getRefs()
 	if err != nil {
@@ -183,12 +185,11 @@ func processCommits() error {
 		return cli.Exit(err.Error(), 1)
 	}
 
-	/// TODO: make option...?
-	/// this might be something im too lazy to do
+	/// TODO: make option...? this might be something im too lazy to do
 	PRETTY := "%H\t%at\t%an\t%C(reset)%C(auto)%d%C(reset)\t%s"
 
 	cmd := exec.Command("git", "--git-dir="+config.repoPath,
-		"log", "--date-order", "--pretty=format:<%H><%h><%P>"+PRETTY)
+		"log", "--date-order", "--pretty=format:<%H><%h><%P>"+PRETTY, "--color")
 	if config.displayAll {
 		cmd.Args = append(cmd.Args, "--all", "HEAD")
 	}
@@ -205,6 +206,7 @@ func processCommits() error {
 
 	collectedLines := []string{}
 	if config.reverse {
+		/// we only collect lines when reversing
 		collectedLines = make([]string, 0, 128)
 	}
 	for {
@@ -251,9 +253,10 @@ func processCommits() error {
 		ret.WriteString(fmt.Sprintf("%s{yellow}%s",
 			strings.Repeat(" ", int(config.rightMargin)), author))
 		if _, ok := refMap[sha]; ok {
+			status = status
+			/// TODO: ^/HEAD
 			autoRefs = strings.Replace(autoRefs, "HEAD", "HEAD"+status, 1)
 			autoRefs = strings.ReplaceAll(autoRefs, "tag:", "{magenta}tag:{/magenta}")
-			autoRefs = " " + autoRefs
 		}
 		ret.WriteString(autoRefs)
 		ret.WriteString("{/} ")
@@ -263,15 +266,20 @@ func processCommits() error {
 		ret.WriteString(vineMerge(&vine, sha, nextShas, parents))
 
 		if config.reverse {
-			collectedLines = append(collectedLines, oigiki.ProcessTags(ret.String()))
+			/// split each line for proper reversal (theyre printed in clumps)
+			collectedLines = append(collectedLines, strings.Split(ret.String(), "\n")...)
 		} else {
+			/// otherwise print as clumps
 			fmt.Print(oigiki.ProcessTags(ret.String()))
 		}
 	}
 
 	if config.reverse {
 		for _, x := range slices.Backward(collectedLines) {
-			fmt.Print(x)
+			if x == "" {
+				continue
+			}
+			fmt.Println(oigiki.ProcessTags(x))
 		}
 	}
 
@@ -668,7 +676,7 @@ func visXfrm(line string) string {
 			# *: filler
 	*/
 	if config.reverse {
-		line = tr(line, "efg.xyz.t", "xyz.efg.r")
+		line = tr(line, "efg.xyz.tr", "xyz.efg.rt")
 		/// TODO: option to not flip tip and root char?
 		// line = tr(line, "efg.xyz", "xyz.efg")
 	}
@@ -690,39 +698,86 @@ func visXfrm(line string) string {
 	}
 
 	/// update the colors with regex
-	if matches := leftxB.FindStringSubmatch(line); len(matches) > 0 {
-		offset := offsetHelper(strings.Index(line, matches[1]))
-		colorHints[offset] = getBranchColor(offset)
-	} else if matches := leftgI.FindStringSubmatch(line); len(matches) > 0 {
-		offset := offsetHelper(strings.Index(line, matches[1]))
-		colorHints[offset] = getBranchColor(offset)
-	} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
-		offset := offsetHelper(strings.Index(line, matches[1]))
-		/// colorHints needs clearing, the source branch color (right)
-		/// needs to run all the way until it hits the target branch color
-		clearColorHintsUnderMatch(offset, matches[1], &colorHints)
-		colorHints[offset] = getBranchColor(offset - 1)
-	} else if matches := rightzI.FindStringSubmatch(line); len(matches) > 0 {
-		offset := offsetHelper(strings.Index(line, matches[1]))
-		/// TODO: none of my repos have a z...I, does this also need to clear colorHints?
-		colorHints[offset] = getBranchColor(offset)
-	}
+	/// TODO: find a better way to color reverse output? duplicating the whole block is annoying
+	if config.reverse {
+		if matches := leftxB.FindStringSubmatch(line); len(matches) > 0 {
+			idx := strings.Index(line, matches[1])
+			offset := offsetHelper(idx)
+			/// colorHints needs clearing, the source branch color (right)
+			/// needs to run all the way until it hits the target branch color
+			/// if the x is on an odd column it inherits the color automatically
+			clearColorHintsUnderMatch(offset, matches[1], &colorHints)
+			if idx %2 == 0 {
+				colorHints[offset] = getBranchColor(offset)
+				colorHints[idx+1] = getBranchColor((idx + len(matches[1])) / 2)
+			} else {
+				colorHints[offset] = getBranchColor(offset-1)
+				colorHints[idx+len(matches[1])-1] = getBranchColor((idx + len(matches[1])) / 2)
+			}
+		} else if matches := leftgI.FindStringSubmatch(line); len(matches) > 0 {
+			idx := strings.Index(line, matches[1])
+			offset := offsetHelper(idx)
+			colorHints[idx] = getBranchColor(offset)
+		} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
+			offset := offsetHelper(strings.Index(line, matches[1]))
+			colorHints[offset] = getBranchColor(offset)
+		} else if matches := rightzI.FindStringSubmatch(line); len(matches) > 0 {
+			idx := strings.Index(line, matches[1])
+			offset := offsetHelper(idx)
+			/// TODO: none of my repos have a z...I, does this also need to clear colorHints?
+			colorHints[idx] = getBranchColor(offset)
+		}
 
-	/// the overpasses needs to be done separately because the regexes above may overlap
-	/// NOTE: overpasses inherit only the base color, so we zero-out colorHints over the length of the match
-	if matches := leftAg.FindStringSubmatch(line); len(matches) > 0 {
-		idx := strings.Index(line, matches[1])
-		offset := offsetHelper(idx)
-		clearColorHintsUnderMatch(idx, matches[1], &colorHints)
-		/// color the section (minus the A)
-		colorHints[idx] = getBranchColor((idx + len(matches[1])) / 2)
-		/// color the "A"
-		colorHints[idx-1] = getBranchColor(offset - 1)
-	} else if matches := rightAz.FindStringSubmatch(line); len(matches) > 0 {
-		idx := strings.Index(line, matches[1])
-		offset := offsetHelper(idx)
-		clearColorHintsUnderMatch(idx, matches[1], &colorHints)
-		colorHints[idx] = getBranchColor(offset)
+		/// the overpasses needs to be done separately because the regexes above may overlap
+		/// NOTE: overpasses inherit only the base color, so we zero-out colorHints over the length of the match
+		if matches := leftAg.FindStringSubmatch(line); len(matches) > 0 {
+			idx := strings.Index(line, matches[1])
+			offset := offsetHelper(idx)
+			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
+			colorHints[idx] = getBranchColor(offset - 1)
+		} else if matches := rightAz.FindStringSubmatch(line); len(matches) > 0 {
+			idx := strings.Index(line, matches[1])
+			offset := offsetHelper(idx)
+			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
+			/// color the section (minus the A)
+			colorHints[idx+1] = getBranchColor((idx + len(matches[1])) / 2)
+			// /// color the "A"
+			colorHints[idx] = getBranchColor(offset)
+		}
+	} else {
+		/// everything above, but in normal order
+		if matches := leftxB.FindStringSubmatch(line); len(matches) > 0 {
+			idx := strings.Index(line, matches[1])
+			offset := offsetHelper(idx)
+			colorHints[idx] = getBranchColor(offset)
+		} else if matches := leftgI.FindStringSubmatch(line); len(matches) > 0 {
+			offset := offsetHelper(strings.Index(line, matches[1]))
+			colorHints[offset] = getBranchColor(offset)
+		} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
+			offset := offsetHelper(strings.Index(line, matches[1]))
+			clearColorHintsUnderMatch(offset, matches[1], &colorHints)
+			colorHints[offset] = getBranchColor(offset - 1)
+		} else if matches := rightzI.FindStringSubmatch(line); len(matches) > 0 {
+			offset := offsetHelper(strings.Index(line, matches[1]))
+			/// TODO: none of my repos have a z...I, does this also need to clear colorHints?
+			colorHints[offset] = getBranchColor(offset)
+		}
+
+		if matches := leftAg.FindStringSubmatch(line); len(matches) > 0 {
+			idx := strings.Index(line, matches[1])
+			offset := offsetHelper(idx)
+			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
+
+			colorHints[idx] = getBranchColor((idx + len(matches[1])) / 2)
+			colorHints[idx-1] = getBranchColor(offset - 1)
+		} else if matches := rightAz.FindStringSubmatch(line); len(matches) > 0 {
+			idx := strings.Index(line, matches[1])
+			offset := offsetHelper(idx)
+			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
+
+			colorHints[idx] = getBranchColor(offset)
+		}
+
 	}
 
 	/// now replace with graph chars
@@ -738,7 +793,7 @@ func visXfrm(line string) string {
 	/// idk why the perl used 10 and 15, like ???
 	case 3:
 		{
-			line = tr(line, "ABDO.efg.IKm.xyz.tCMr", "╠╣══.╔╦╗.║╬─.╚╩╝.╦║║╩")
+			line = tr(line, "ABDO.efg.IKm.xyz.tCMr", "╠╣══.╔╦╗.║╬─.╚╩╝.╓║║╙")
 		}
 	case 4:
 		{
@@ -749,6 +804,7 @@ func visXfrm(line string) string {
 			line = tr(line, "ABDO.efg.IKm.xyz.tCMr", "┣┫━━.┏┳┓.┃╋━.┗┻┛.┳┣┣┻")
 		}
 	}
+	/// TODO: user-defined replace
 
 	/// finally, actually color the string using the hints
 	sb := strings.Builder{}
