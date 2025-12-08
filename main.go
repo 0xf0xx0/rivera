@@ -1,6 +1,23 @@
-// git-河流
-//
-// pretty git-log ported from git-forest(a)
+/*
+git-河流
+
+pretty `git log` ported from git-forest(a)
+
+options:
+
+	--repository path, --repo path      repository path to use (default: ".")
+	--hashlength len, -l len            length of the commit hash (default: 8)
+	--style num, -s num                 style num to select (1-5) (default: 1)
+	--svdepth uint, -s uint             maximum length of merge subvines (default: 2)
+	--graph-margin-left uint, -s uint   left margin of the commit graph (default: 2)
+	--graph-margin-right uint, -s uint  right margin of the commit graph (default: 1)
+	--all                               display all branches
+	--force-color                       force color output (useful for piping)
+	--reverse, -r                       reverse the flow
+	--branchcolors color,color[,color]  comma separated color,color[,color] used for branches, passed straight to oigiki (default: "red, blue, yellow, green, cyan, magenta, white")
+	--help, -h                          show help
+	--version, -v                       print the version
+*/
 package main
 
 import (
@@ -71,8 +88,15 @@ var buildCommit = func() string {
 }()
 
 func main() {
+	/// discard sigpipe
+	go func() {
+		c := make(chan os.Signal, 1)
+		signal.Notify(c, syscall.SIGPIPE)
+		<-c
+	}()
+
 	app := &cli.Command{
-		Name:                   "rivera",
+		Name:                   "git-rivera",
 		Version:                "0.0.0+g" + buildCommit,
 		Usage:                  "display the git river, like git-forest",
 		UseShortOptionHandling: true,
@@ -159,12 +183,6 @@ func main() {
 			return processCommits()
 		},
 	}
-	/// discard sigpipe
-	go func() {
-		c := make(chan os.Signal, 1)
-		signal.Notify(c, syscall.SIGPIPE)
-		<-c
-	}()
 	if err := app.Run(context.Background(), os.Args); err != nil {
 		log.Fatal(err)
 	}
@@ -172,7 +190,7 @@ func main() {
 
 func processCommits() error {
 	/// NOTE: getLineBlock inches the slice along, ensure the backing array has enough capacity
-	/// the buffer stores the noxt commits to look at and is filled by getLineBlock
+	/// the buffer stores the next commits to look at and is filled by getLineBlock
 	global_commitBuffer = make([]string, 0, config.subvineDepth*32)
 	/// each vine is a git branch
 	vine := make([]string, 0, config.subvineDepth)
@@ -770,8 +788,8 @@ func visXfrm(line string) string {
 			/// we take the index of `g` to get the correct color
 			overpassIdx := idx + len(matches[1])
 			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
-			colorHints[idx] = getBranchColor(overpassIdx/2)
-			colorHints[idx] = getBranchColor(offsetHelper(overpassIdx-1))
+			colorHints[idx] = getBranchColor(overpassIdx / 2)
+			colorHints[idx] = getBranchColor(offsetHelper(overpassIdx - 1))
 			colorHints[idx-1] = getBranchColor(offset)
 		} else if matches := rightAz.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])

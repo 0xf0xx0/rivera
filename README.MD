@@ -5,7 +5,7 @@
 ## features
 - persistent branch coloring
 - `--repository` option to pass a path (no more needing to cd beforepaw)
+- a bit more control over overpasses (no more ODODO -> OOOOO)
 
 ## todo
 - finish compat
-- fix merge commit in reverse

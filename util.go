@@ -12,6 +12,7 @@ import (
 )
 
 func getLineBlock(reader *bufio.Reader, max_line int) (lines []string, err error) {
+	/// ensure the commit buffer has max_line commits in it (inch right)
 	for len(global_commitBuffer) < max_line {
 		line := ""
 		line, err = reader.ReadString('\n')
@@ -27,10 +28,11 @@ func getLineBlock(reader *bufio.Reader, max_line int) (lines []string, err error
 	}
 
 	lines = make([]string, 0, max_line)
-	furstLine := global_commitBuffer[0]
-	global_commitBuffer = global_commitBuffer[1:]
+	furstLine := global_commitBuffer[0] /// steal the furst commit to mark it visited
+	global_commitBuffer = global_commitBuffer[1:] /// inch right by one
 	lines = append(lines, furstLine)
 
+	/// copy the next `max_line-2` commits for lookahead
 	for i := 2; i <= max_line; i++ {
 		lines = append(lines, global_commitBuffer[i-2])
 	}
