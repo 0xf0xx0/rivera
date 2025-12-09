@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -28,7 +29,7 @@ func getLineBlock(reader *bufio.Reader, max_line int) (lines []string, err error
 	}
 
 	lines = make([]string, 0, max_line)
-	furstLine := global_commitBuffer[0] /// steal the furst commit to mark it visited
+	furstLine := global_commitBuffer[0]           /// steal the furst commit to mark it visited
 	global_commitBuffer = global_commitBuffer[1:] /// inch right by one
 	lines = append(lines, furstLine)
 
@@ -95,9 +96,35 @@ func cleanLine(l string) string {
 	return strings.Trim(l, "\r\n\t")
 }
 
-func fileExists(path string) bool {
+func fileExistsInRepo(path string) bool {
 	_, err := fs.Stat(os.DirFS(config.repoPath), path)
 	return err == nil
+}
+func fileExists(path string) bool {
+	_, err := fs.Stat(os.DirFS("/"), path)
+	return err == nil
+}
+func recursivelyLookForGitRoot(path string, maxDepth int) (string, error) {
+	if maxDepth == 0 {
+		return "", errors.New("out of depth")
+	}
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	path, err = filepath.EvalSymlinks(path)
+	if err != nil {
+		return "", err
+	}
+	path = filepath.Clean(path)
+	potentialRoot := filepath.Join(path, "./.git")
+	/// [1:] because fs.root doesnt normalize paths
+	if fileExists(potentialRoot[1:]) {
+		return potentialRoot, nil
+	}
+	maxDepth--
+	path = filepath.Dir(path)
+	return recursivelyLookForGitRoot(path, maxDepth)
 }
 
 // useful func generated while throwing perl at gpt-oss

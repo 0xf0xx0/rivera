@@ -28,7 +28,6 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"regexp"
 	"runtime/debug"
 	"slices"
@@ -164,7 +163,11 @@ func main() {
 			if ctx.Bool("force-color") {
 				os.Setenv("CLICOLOR_FORCE", "true")
 			}
-			config.repoPath = filepath.Join(ctx.String("repository"), "./.git")
+			repoRoot, err := recursivelyLookForGitRoot(ctx.String("repository"), 8)
+			if err != nil {
+				return err
+			}
+			config.repoPath = repoRoot
 			config.displayAll = ctx.Bool("all")
 			config.reverse = ctx.Bool("reverse")
 			config.style = ctx.Uint8("style")
