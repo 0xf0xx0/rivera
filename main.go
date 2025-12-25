@@ -5,18 +5,18 @@ pretty `git log` ported from git-forest(a)
 
 options:
 
-	--repository path, --repo path      repository path to use (default: ".")
-	--hashlength len, -l len            length of the commit hash (default: 8)
-	--style num, -s num                 style num to select (1-5) (default: 1)
-	--svdepth uint, -s uint             maximum length of merge subvines (default: 2)
-	--graph-margin-left uint, -s uint   left margin of the commit graph (default: 2)
-	--graph-margin-right uint, -s uint  right margin of the commit graph (default: 1)
-	--all                               display all branches
-	--force-color                       force color output (useful for piping)
-	--reverse, -r                       reverse the flow
-	--branchcolors color,color[,color]  comma separated color,color[,color] used for branches, passed straight to oigiki (default: "red, blue, yellow, green, cyan, magenta, white")
-	--help, -h                          show help
-	--version, -v                       print the version
+	--repository path, --repo path                              repository path to use (default: ".")
+	--hashlength len, --hashlen len, -l len                     length of the commit hash (default: 8)
+	--style num, -s num                                         style num to select (1-5) (default: 1)
+	--subvinedepth uint, --svdepth uint, --depth uint, -d uint  maximum length of merge subvines (default: 2)
+	--graphmarginleft uint, --marginl uint                      left margin of the commit graph (default: 2)
+	--graphmarginright uint, --marginr uint                     right margin of the commit graph (default: 1)
+	--all, -a                                                   display all branches
+	--force-color                                               force color output (useful for piping)
+	--reverse, -r                                               reverse the flow
+	--branchcolors color,color[,color]                          comma separated color,color[,color] used for branches, passed straight to oigiki (default: "red, blue, yellow, green, cyan, magenta, white")
+	--help, -h                                                  show help
+	--version, -v
 */
 package main
 
@@ -64,7 +64,7 @@ var (
 // global
 var (
 	global_commitBuffer []string
-	BRANCH_COLORS       = []string{} /// populated in flag
+	global_branchColors []string /// populated in flag
 )
 
 var config = struct {
@@ -110,7 +110,7 @@ func main() {
 			&cli.Uint8Flag{
 				Name:    "hashlength",
 				Usage:   "`len`gth of the commit hash",
-				Aliases: []string{"l"},
+				Aliases: []string{"hashlen", "l"},
 				Value:   8,
 			},
 			&cli.Uint8Flag{
@@ -120,21 +120,21 @@ func main() {
 				Value:   1,
 			},
 			&cli.Uint8Flag{
-				Name:    "svdepth",
+				Name:    "subvinedepth",
 				Usage:   "maximum length of merge subvines",
-				Aliases: []string{"s"},
+				Aliases: []string{"svdepth", "depth", "d"},
 				Value:   2,
 			},
 			&cli.Uint8Flag{
-				Name:    "graph-margin-left",
+				Name:    "graphmarginleft",
 				Usage:   "left margin of the commit graph",
-				Aliases: []string{"s"},
+				Aliases: []string{"marginl"},
 				Value:   2,
 			},
 			&cli.Uint8Flag{
-				Name:    "graph-margin-right",
+				Name:    "graphmarginright",
 				Usage:   "right margin of the commit graph",
-				Aliases: []string{"s"},
+				Aliases: []string{"marginr"},
 				Value:   1,
 			},
 			&cli.BoolFlag{
@@ -176,9 +176,9 @@ func main() {
 			config.leftMargin = ctx.Uint8("graph-margin-left")
 			config.rightMargin = ctx.Uint8("graph-margin-right")
 			config.subvineDepth = ctx.Uint8("svdepth") + 1
-			BRANCH_COLORS = strings.Split(ctx.String("branchcolors"), ",")
-			for color := range BRANCH_COLORS {
-				BRANCH_COLORS[color] = strings.TrimSpace(cleanLine(BRANCH_COLORS[color]))
+			global_branchColors = strings.Split(ctx.String("branchcolors"), ",")
+			for color := range global_branchColors {
+				global_branchColors[color] = strings.TrimSpace(cleanLine(global_branchColors[color]))
 			}
 
 			//////
@@ -702,7 +702,7 @@ func visXfrm(line string) string {
 		// line = tr(line, "efg.xyz", "xyz.efg")
 	}
 	/*
-		color entire branches, including overpasses
+	    color entire branches, including overpasses
 		characters inside (groups) are colored differently
 		x...B, g...I, A(...g) for leftward merge
 		e(...B), z(...I), A...z for rightward merge
@@ -869,5 +869,5 @@ func visPost(line string) string {
 }
 
 func getBranchColor(n int) string {
-	return BRANCH_COLORS[n%len(BRANCH_COLORS)]
+	return global_branchColors[n%len(global_branchColors)]
 }
