@@ -34,7 +34,7 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/0xf0xx0/oigiki"
+	"git.0xf0xx0.eth.limo/0xf0xx0/oigiki"
 	"github.com/urfave/cli/v3"
 )
 
@@ -138,9 +138,10 @@ func main() {
 				Value:   1,
 			},
 			&cli.BoolFlag{
-				Name:  "all",
-				Usage: "display all branches",
-				Value: false,
+				Name:    "all",
+				Usage:   "display all branches",
+				Aliases: []string{"a"},
+				Value:   false,
 			},
 			&cli.BoolFlag{
 				Name:  "force-color",
@@ -169,7 +170,7 @@ func main() {
 			}
 			config.repoPath = repoRoot
 			config.displayAll = ctx.Bool("all")
-			config.reverse = ctx.Bool("reverse")
+			config.reverse = !ctx.Bool("reverse")
 			config.style = ctx.Uint8("style")
 			config.hashLen = ctx.Uint8("hashlength")
 			config.leftMargin = ctx.Uint8("graph-margin-left")
@@ -274,8 +275,7 @@ func processCommits() error {
 		ret.WriteString(fmt.Sprintf("%s{yellow}%s",
 			strings.Repeat(" ", int(config.rightMargin)), author))
 		if _, ok := refMap[sha]; ok {
-			status = status
-			/// TODO: ^/HEAD
+			/// TODO: /HEAD
 			autoRefs = strings.Replace(autoRefs, "HEAD", "HEAD"+status, 1)
 			autoRefs = strings.ReplaceAll(autoRefs, "tag:", "{magenta}tag:{/magenta}")
 		}
