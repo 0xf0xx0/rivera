@@ -176,7 +176,7 @@ func main() {
 		},
 		Action: func(_ context.Context, ctx *cli.Command) error {
 			if ctx.Bool("force-color") {
-				os.Setenv("CLICOLOR_FORCE", "true")
+				oigiki.NoColor = false
 			}
 			repoRoot, err := recursivelyLookForGitRoot(ctx.String("repository"), 8)
 			if err != nil {

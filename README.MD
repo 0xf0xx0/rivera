@@ -2,17 +2,22 @@
 
 [git-foresta](https://github.com/takaaki-kasai/git-foresta) in go
 
+![screenshot of git-rivera output](./showoff.png)
+
 ## features
+
 - persistent branch coloring
 - `--repository` option to pass a path (no more needing to cd beforepaw)
 - a bit more control over overpasses (no more ODODO -> OOOOO)
 
 ## install
+
 ```sh
 go install git.0xf0xx0.eth.limo/0xf0xx0/rivera@latest
 ```
 
 ### from source
+
 ```sh
 git clone https://git.0xf0xx0.eth.limo/0xf0xx0/rivera.git
 cd rivera
@@ -21,17 +26,23 @@ go install
 ```
 
 ## usage
+
+with git:
+
+```sh
+# in your repo dir
+git rivera
 ```
-NAME:
-   git-rivera - display the git river, like git-forest
 
-USAGE:
-   git-rivera [global options]
+or use it standalone:
 
-VERSION:
-   0.0.0+gcfa3f50d
+```sh
+git-rivera
+```
 
-GLOBAL OPTIONS:
+## options
+
+```
    --repository path, --repo path                              repository path to use (default: ".")
    --hashlength len, --hashlen len, -l len                     length of the commit hash (default: 8)
    --style num, -s num                                         style num to select (1-5) (default: 1)
@@ -47,4 +58,5 @@ GLOBAL OPTIONS:
 ```
 
 ## todo
+
 - finish compat
