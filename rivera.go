@@ -624,7 +624,7 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) string {
 			replaceAt(&output, " ", i)
 		}
 	}
-	return fmt.Sprintln(strings.Repeat(" ", int(config.hashLen)+len(DATE_FMT)+3) + visPost(visFan(output, "merge")))
+	return fmt.Sprintln(strings.Repeat(" ", int(config.hashLen)+1+len(DATE_FMT)+int(config.leftMargin)) + visPost(visFan(output, "merge")))
 }
 
 /// beautification
