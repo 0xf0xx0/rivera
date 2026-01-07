@@ -16,7 +16,7 @@ options:
 	--reverse, -r                                               reverse the flow
 	--branchcolors color,color[,color]                          comma separated color,color[,color] used for branches, passed straight to oigiki (default: "red, blue, yellow, green, cyan, magenta, white")
 	--help, -h                                                  show help
-	--version, -v
+	--version, -v                                               print the version
 */
 package main
 
@@ -702,11 +702,11 @@ func visXfrm(line string) string {
 		// line = tr(line, "efg.xyz", "xyz.efg")
 	}
 	/*
-	    color entire branches, including overpasses
-		characters inside (groups) are colored differently
-		x...B, g...I, A(...g) for leftward merge
-		e(...B), z(...I), A...z for rightward merge
-		otherwise color every other line
+		    color entire branches, including overpasses
+			characters inside (groups) are colored differently
+			x...B, g...I, A(...g) for leftward merge
+			e(...B), z(...I), A...z for rightward merge
+			otherwise color every other line
 	*/
 
 	colorHints := make([]string, len(line))
