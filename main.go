@@ -42,6 +42,19 @@ const (
 	DATE_FMT = "2006-01-02 15:04"
 )
 
+const commandHelpTemplate = `Name:
+   {bold}{green}{{.Name}} {/}- {blue}{{.Usage}}{/}
+
+Usage:
+   {green}{{.Name}} {blue}[options]{/}
+
+Options:{blue}
+   {{range .VisibleFlags}}{{.String}}
+   {{end}}{/}
+Version:
+   {green}v{{.Version}}
+`
+
 // regex
 var (
 	lineRegex    = regexp.MustCompile(`^<(.*?)><(.*?)><(.*?)>(.*)`)
@@ -93,6 +106,7 @@ func main() {
 		signal.Notify(c, syscall.SIGPIPE)
 		<-c
 	}()
+	cli.RootCommandHelpTemplate = oigiki.ProcessTags(commandHelpTemplate)
 
 	app := &cli.Command{
 		Name:                   "git-rivera",
