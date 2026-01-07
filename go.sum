@@ -1,5 +1,5 @@
- git.0xf0xx0.eth.limo/0xf0xx0/oigiki v1.2.0 h1:ZUCepY7C5ODaflzyY8GYx/QV6JeY42tXSipi1jYLDCs=
- git.0xf0xx0.eth.limo/0xf0xx0/oigiki v1.2.0/go.mod h1:VUTaSR1Vs1KvELE39pluioL2ecI/vtvNZPmDGFKlD9o=
+git.0xf0xx0.eth.limo/0xf0xx0/oigiki v1.3.0 h1:A9PQ+Tx64d97N7s1QeRbWqWqcHNC+l94fiLOSZ3F4eI=
+git.0xf0xx0.eth.limo/0xf0xx0/oigiki v1.3.0/go.mod h1:0/T+yirG7BckgCWvPxXP6RMnDWulVm7qhbgjcHAX+Xs=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=

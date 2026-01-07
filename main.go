@@ -749,7 +749,7 @@ func visXfrm(line string) string {
 			colorHints[idx] = getBranchColor(offset)
 		}
 
-		/// the overpasses needs to be done separately because the regexes above may overlap
+		/// NOTE: the overpasses needs to be done separately because the regexes above may overlap
 		/// NOTE: overpasses inherit only the base color, so we zero-out colorHints over the length of the match
 		if matches := leftAg.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
@@ -805,23 +805,28 @@ func visXfrm(line string) string {
 
 	/// now replace with graph chars
 	switch config.style {
+	/// thin
 	case 1:
 		{
 			line = tr(line, "ABDO.efg.IKm.xyz.tCMr", "├┤──.┌┬┐.│┼─.└┴┘.┬├├┴")
 		}
+	/// thin with double bridge
 	case 2:
 		{
 			line = tr(line, "ABDO.efg.IKm.xyz.tCMr", "╞╡═╪.╒╤╕.│┼─.╘╧╛.┬├├┴")
 		}
 	/// idk why the perl used 10 and 15, like ???
+	/// double
 	case 3:
 		{
 			line = tr(line, "ABDO.efg.IKm.xyz.tCMr", "╠╣══.╔╦╗.║╬─.╚╩╝.╓║║╙")
 		}
+	/// curves
 	case 4:
 		{
 			line = tr(line, "ABDO.efg.IKm.xyz.tCMr", "├┤──.╭┬╮.│┼─.╰┴╯.┬├├┴")
 		}
+	/// thicc
 	case 5:
 		{
 			line = tr(line, "ABDO.efg.IKm.xyz.tCMr", "┣┫━━.┏┳┓.┃╋━.┗┻┛.┳┣┣┻")
