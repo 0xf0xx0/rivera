@@ -104,9 +104,9 @@ func fileExists(path string) bool {
 	_, err := fs.Stat(os.DirFS("/"), path)
 	return err == nil
 }
-func recursivelyLookForGitRoot(path string, maxDepth int) (string, error) {
+func recursivelyLookForGitRoot(path string, maxDepth uint) (string, error) {
 	if maxDepth == 0 {
-		return "", errors.New("out of depth")
+		return "", errors.New("ran out of depth looking for git root; is this actually a git repository?")
 	}
 	path, err := filepath.Abs(path)
 	if err != nil {
@@ -118,7 +118,7 @@ func recursivelyLookForGitRoot(path string, maxDepth int) (string, error) {
 	}
 	path = filepath.Clean(path)
 	potentialRoot := filepath.Join(path, "./.git")
-	/// [1:] because fs.root doesnt normalize paths
+	/// [1:] because fs.root doesnt treat base / as root
 	if fileExists(potentialRoot[1:]) {
 		return potentialRoot, nil
 	}

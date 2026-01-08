@@ -190,6 +190,12 @@ func main() {
 				Usage: "comma separated `color,color[,color]` used for branches, passed straight to oigiki",
 				Value: "red, blue, yellow, green, cyan, magenta, white",
 			},
+			&cli.UintFlag{
+				Name:    "maxgitrecursedepth",
+				Aliases: []string{"mgrd"},
+				Usage:   "maximum depth to search for a .git dir",
+				Value:   8,
+			},
 		},
 		Action: func(_ context.Context, ctx *cli.Command) error {
 			oigiki.NoColor = !term.IsTerminal(int(os.Stdout.Fd()))
@@ -200,7 +206,7 @@ func main() {
 				oigiki.NoColor = true
 			}
 
-			repoRoot, err := recursivelyLookForGitRoot(ctx.String("repository"), 8)
+			repoRoot, err := recursivelyLookForGitRoot(ctx.String("repository"), ctx.Uint("maxgitrecursedepth"))
 			if err != nil {
 				return err
 			}
@@ -211,7 +217,7 @@ func main() {
 			config.hashLen = ctx.Uint8("hashlength")
 			config.leftMargin = ctx.Uint8("graphmarginleft")
 			config.rightMargin = ctx.Uint8("graphmarginright")
-			config.subvineDepth = ctx.Uint8("svdepth") + 1
+			config.subvineDepth = ctx.Uint8("svdepth") + 1 /// TODO: figure out why +1
 			global_branchColors = strings.Split(ctx.String("branchcolors"), ",")
 			for color := range global_branchColors {
 				global_branchColors[color] = strings.TrimSpace(cleanLine(global_branchColors[color]))

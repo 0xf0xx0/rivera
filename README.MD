@@ -30,7 +30,6 @@ go install
 with git:
 
 ```sh
-# in your repo dir
 git rivera
 ```
 
