@@ -38,6 +38,7 @@ import (
 
 	"git.0xf0xx0.eth.limo/0xf0xx0/oigiki"
 	"github.com/urfave/cli/v3"
+	"golang.org/x/term"
 )
 
 const (
@@ -179,11 +180,6 @@ func main() {
 				Value:   false,
 			},
 			&cli.BoolFlag{
-				Name:  "force-color",
-				Usage: "force color output (useful for piping)",
-				Value: false,
-			},
-			&cli.BoolFlag{
 				Name:    "reverse",
 				Usage:   "reverse the flow",
 				Aliases: []string{"r"},
@@ -196,6 +192,8 @@ func main() {
 			},
 		},
 		Action: func(_ context.Context, ctx *cli.Command) error {
+			oigiki.NoColor = !term.IsTerminal(int(os.Stdout.Fd()))
+
 			if ctx.Bool("color") {
 				oigiki.NoColor = false
 			} else if ctx.Bool("nocolor") {
@@ -252,6 +250,9 @@ func processCommits() error {
 		"log", "--date-order", "--pretty=format:<%H><%h><%P>"+PRETTY, "--color")
 	if config.displayAll {
 		cmd.Args = append(cmd.Args, "--all", "HEAD")
+	}
+	if oigiki.NoColor {
+		cmd.Args = append(cmd.Args, "--no-color")
 	}
 
 	stdout, err := cmd.StdoutPipe()
