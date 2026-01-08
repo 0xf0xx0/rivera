@@ -12,9 +12,9 @@ options:
 	--graphmarginleft uint, --marginl uint                      left margin of the commit graph (default: 2)
 	--graphmarginright uint, --marginr uint                     right margin of the commit graph (default: 1)
 	--all, -a                                                   display all branches
-	--force-color                                               force color output (useful for piping)
 	--reverse, -r                                               reverse the flow
 	--branchcolors color,color[,color]                          comma separated color,color[,color] used for branches, passed straight to oigiki (default: "red, blue, yellow, green, cyan, magenta, white")
+	--maxgitrecursedepth uint, --mgrd uint                      maximum depth to search for a .git dir (default: 8)
 	--help, -h                                                  show help
 	--version, -v                                               print the version
 	--color                                                     force color output
