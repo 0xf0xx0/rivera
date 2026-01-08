@@ -17,6 +17,8 @@ options:
 	--branchcolors color,color[,color]                          comma separated color,color[,color] used for branches, passed straight to oigiki (default: "red, blue, yellow, green, cyan, magenta, white")
 	--help, -h                                                  show help
 	--version, -v                                               print the version
+	--color                                                     force color output
+	--nocolor, --stdout                                         disable color output
 */
 package main
 
@@ -114,6 +116,25 @@ func main() {
 		Usage:                  "display the git river, like git-forest",
 		UseShortOptionHandling: true,
 		/// TODO: pass unknown flags to git
+		MutuallyExclusiveFlags: []cli.MutuallyExclusiveFlags{
+			{
+				Flags: [][]cli.Flag{
+					{
+						&cli.BoolFlag{
+							Name:  "color",
+							Usage: "force color output",
+						},
+					},
+					{
+						&cli.BoolFlag{
+							Name:    "nocolor",
+							Aliases: []string{"stdout"},
+							Usage:   "disable color output",
+						},
+					},
+				},
+			},
+		},
 		Flags: []cli.Flag{
 			&cli.StringFlag{
 				Name:    "repository",
@@ -175,9 +196,12 @@ func main() {
 			},
 		},
 		Action: func(_ context.Context, ctx *cli.Command) error {
-			if ctx.Bool("force-color") {
+			if ctx.Bool("color") {
 				oigiki.NoColor = false
+			} else if ctx.Bool("nocolor") {
+				oigiki.NoColor = true
 			}
+
 			repoRoot, err := recursivelyLookForGitRoot(ctx.String("repository"), 8)
 			if err != nil {
 				return err
