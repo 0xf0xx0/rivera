@@ -261,12 +261,12 @@ func processCommits() error {
 	PRETTY := "%H\t%at\t%an\t%C(reset)%C(auto)%d%C(reset)\t%s"
 
 	cmd := exec.Command("git", "--git-dir="+config.repoPath,
-		"log", "--date-order", "--pretty=format:<%H><%h><%P>"+PRETTY, "--color")
+		"log", "--date-order", "--pretty=format:<%H><%h><%P>"+PRETTY)
 	if config.displayAll {
 		cmd.Args = append(cmd.Args, "--all", "HEAD")
 	}
-	if oigiki.NoColor {
-		cmd.Args = append(cmd.Args, "--no-color")
+	if !oigiki.NoColor {
+		cmd.Args = append(cmd.Args, "--color")
 	}
 
 	stdout, err := cmd.StdoutPipe()
