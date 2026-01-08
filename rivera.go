@@ -211,8 +211,8 @@ func main() {
 			config.reverse = !ctx.Bool("reverse")
 			config.style = ctx.Uint8("style")
 			config.hashLen = ctx.Uint8("hashlength")
-			config.leftMargin = ctx.Uint8("graph-margin-left")
-			config.rightMargin = ctx.Uint8("graph-margin-right")
+			config.leftMargin = ctx.Uint8("graphmarginleft")
+			config.rightMargin = ctx.Uint8("graphmarginright")
 			config.subvineDepth = ctx.Uint8("svdepth") + 1
 			global_branchColors = strings.Split(ctx.String("branchcolors"), ",")
 			for color := range global_branchColors {
