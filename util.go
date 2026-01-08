@@ -5,7 +5,6 @@ import (
 	"errors"
 	"io"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -97,11 +96,11 @@ func cleanLine(l string) string {
 }
 
 func fileExistsInRepo(path string) bool {
-	_, err := fs.Stat(os.DirFS(config.repoPath), path)
+	_, err := fs.Stat(global_repoRoot, path)
 	return err == nil
 }
 func fileExists(path string) bool {
-	_, err := fs.Stat(os.DirFS("/"), path)
+	_, err := fs.Stat(global_root, path)
 	return err == nil
 }
 func recursivelyLookForGitRoot(path string, maxDepth uint) (string, error) {

@@ -26,6 +26,7 @@ import (
 	"bufio"
 	"context"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"os/exec"
@@ -79,8 +80,9 @@ var (
 
 // global
 var (
-	global_commitBuffer []string
-	global_branchColors []string /// populated in flag
+	global_commitBuffer          []string
+	global_branchColors          []string /// populated in flag
+	global_root, global_repoRoot fs.FS
 )
 
 var config = struct {
@@ -206,10 +208,16 @@ func main() {
 				oigiki.NoColor = true
 			}
 
+			/// my dumb ass
+			global_root = os.DirFS("/")
+
 			repoRoot, err := recursivelyLookForGitRoot(ctx.String("repository"), ctx.Uint("maxgitrecursedepth"))
 			if err != nil {
 				return err
 			}
+			/// yyyyyyoink
+			global_repoRoot = os.DirFS(repoRoot)
+
 			config.repoPath = repoRoot
 			config.displayAll = ctx.Bool("all")
 			config.reverse = !ctx.Bool("reverse")
@@ -430,27 +438,27 @@ func getStatus() (string, error) {
 	}
 
 	/// midflow
-	if fileExists("/rebase-merge") {
-		if fileExists("/rebase-merge/interactive") {
+	if fileExistsInRepo("/rebase-merge") {
+		if fileExistsInRepo("/rebase-merge/interactive") {
 			midFlow = "|REBASE-i"
 		} else {
 			midFlow = "|REBASE-m"
 		}
-	} else if fileExists("/rebase-apply") {
-		if fileExists("/rebase-apply/rebasing") {
+	} else if fileExistsInRepo("/rebase-apply") {
+		if fileExistsInRepo("/rebase-apply/rebasing") {
 			midFlow = "|REBASE"
-		} else if fileExists("/rebase-apply/applying") {
+		} else if fileExistsInRepo("/rebase-apply/applying") {
 			midFlow = "|AM"
 		} else {
 			midFlow = "|AM/REBASE"
 		}
-	} else if fileExists("/MERGE_HEAD") {
+	} else if fileExistsInRepo("/MERGE_HEAD") {
 		midFlow = "|MERGING"
-	} else if fileExists("/CHERRY_PICK_HEAD") {
+	} else if fileExistsInRepo("/CHERRY_PICK_HEAD") {
 		midFlow = "|CHERRY-PICKING"
-	} else if fileExists("/REVERT_HEAD") {
+	} else if fileExistsInRepo("/REVERT_HEAD") {
 		midFlow = "|REVERTING"
-	} else if fileExists("/BISECT_LOG") {
+	} else if fileExistsInRepo("/BISECT_LOG") {
 		midFlow = "|BISECTING"
 	}
 	return dirty + midFlow, nil
