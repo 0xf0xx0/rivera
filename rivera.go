@@ -115,7 +115,7 @@ func main() {
 
 	app := &cli.Command{
 		Name:                   "git-rivera",
-		Version:                "0.0.0+g" + buildCommit,
+		Version:                "1.0.0+g" + buildCommit,
 		Usage:                  "display the git river, like git-forest",
 		UseShortOptionHandling: true,
 		/// TODO: pass unknown flags to git
