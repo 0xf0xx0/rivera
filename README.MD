@@ -1,4 +1,4 @@
-# git-rivera
+# git-rivera/git-河流
 
 [git-foresta](https://github.com/takaaki-kasai/git-foresta) in go
 

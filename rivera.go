@@ -1,7 +1,7 @@
 /*
-git-河流
+git-rivera/git-河流
 
-pretty `git log` ported from git-forest(a)
+display the git river, like git-forest
 
 options:
 
