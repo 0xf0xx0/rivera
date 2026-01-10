@@ -127,9 +127,9 @@ func recursivelyLookForGitRoot(path string, maxDepth uint) (string, error) {
 }
 
 // useful func generated while throwing perl at gpt-oss
-func tr(s string, from, to string) string {
+func tr(source string, from, to string) string {
 	var b strings.Builder
-	for _, r := range s {
+	for _, r := range source {
 		idx := strings.IndexRune(from, r)
 		if idx >= 0 {
 			b.WriteRune([]rune(to)[idx])

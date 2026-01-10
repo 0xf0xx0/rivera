@@ -728,8 +728,7 @@ func visFan3(l, r string) string {
 // then, the patterns are matched and the colors are updated and written before being turned into
 // graph chars and returned
 func visXfrm(line string) string {
-	/*
-		 NOTE: from original perl:
+	/* NOTE: from original perl:
 			# A: branch to right
 			# B: branch to left
 			# C: commit
@@ -754,13 +753,6 @@ func visXfrm(line string) string {
 		/// TODO: option to not flip tip and root char?
 		// line = tr(line, "efg.xyz", "xyz.efg")
 	}
-	/*
-		    color entire branches, including overpasses
-			characters inside (groups) are colored differently
-			x...B, g...I, A(...g) for leftward merge
-			e(...B), z(...I), A...z for rightward merge
-			otherwise color every other line
-	*/
 
 	colorHints := make([]string, len(line))
 
@@ -771,7 +763,7 @@ func visXfrm(line string) string {
 		}
 	}
 
-	/// update the colors with regex
+	/// color branches and overpasses based on source
 	/// TODO: find a better way to color reverse output? duplicating the whole block is annoying
 	if config.reverse {
 		if matches := leftxB.FindStringSubmatch(line); len(matches) > 0 {
