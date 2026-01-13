@@ -100,7 +100,6 @@ var buildCommit = func() string {
 			}
 		}
 	}
-
 	return ""
 }()
 
@@ -111,6 +110,7 @@ func main() {
 		signal.Notify(c, syscall.SIGPIPE)
 		<-c
 	}()
+	cli.FlagStringer = stolenFlagStringer
 	cli.RootCommandHelpTemplate = oigiki.ProcessTags(commandHelpTemplate)
 
 	app := &cli.Command{
@@ -145,6 +145,7 @@ func main() {
 				Aliases: []string{"repo"},
 				Value:   ".",
 			},
+			/// MAYBE: --starting-revision/--rev flag for startting at a commit? same for end?
 			&cli.Uint8Flag{
 				Name:    "hashlength",
 				Usage:   "`len`gth of the commit hash",
@@ -160,7 +161,7 @@ func main() {
 			&cli.Uint8Flag{
 				Name:    "subvinedepth",
 				Usage:   "maximum length of merge subvines",
-				Aliases: []string{"svdepth", "depth", "d"},
+				Aliases: []string{"svdepth"},
 				Value:   2,
 			},
 			&cli.Uint8Flag{

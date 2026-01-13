@@ -3,12 +3,16 @@ package main
 import (
 	"bufio"
 	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
+
+	"git.0xf0xx0.eth.limo/0xf0xx0/oigiki"
+	"github.com/urfave/cli/v3"
 )
 
 func getLineBlock(reader *bufio.Reader, max_line int) (lines []string, err error) {
@@ -138,4 +142,98 @@ func tr(source string, from, to string) string {
 		}
 	}
 	return b.String()
+}
+
+// STOLEN EVILLY from urfave/cli
+// commithash: 2240690b11d48e705bd123082c787e05a9ac196c
+// modified for my uses, some funcs inlined, etc
+// stolen funcs all under the urfave/cli license, which is MIT
+func stolenFlagStringer(f cli.Flag) string {
+	// enforce DocGeneration interface on flags to avoid reflection
+	df, ok := f.(cli.DocGenerationFlag)
+	if !ok {
+		return ""
+	}
+	/// inlined `unquoteUsage`
+	placeholder, usage := func() (string, string) {
+		var usage string = df.GetUsage()
+		for i := 0; i < len(usage); i++ {
+			if usage[i] == '`' {
+				for j := i + 1; j < len(usage); j++ {
+					if usage[j] == '`' {
+						name := usage[i+1 : j]
+						usage = usage[:i] + name + usage[j+1:]
+						return name, usage
+					}
+				}
+				break
+			}
+		}
+		return "", usage
+	}()
+	needsPlaceholder := df.TakesValue()
+	// if needsPlaceholder is true, placeholder is empty
+	if needsPlaceholder && placeholder == "" {
+		// try to get type from flag
+		if tname := df.TypeName(); tname != "" {
+			placeholder = tname
+		} else {
+			placeholder = "value"
+		}
+	}
+
+	defaultValueString := ""
+
+	// don't print default text for required flags
+	if rf, ok := f.(cli.RequiredFlag); !ok || !rf.IsRequired() {
+		if df.IsDefaultVisible() {
+			if s := df.GetDefaultText(); s != "" {
+				defaultValueString = fmt.Sprintf(" (default: %s)", s)
+			} else if df.TakesValue() && df.GetValue() != "" {
+				defaultValueString = fmt.Sprintf(" (default: %s)", df.GetValue())
+			}
+		}
+	}
+
+	usageWithDefault := strings.TrimSpace(usage + defaultValueString)
+
+	/// inlined prefixedNames
+	pn := func() string {
+		var (
+			names       []string = f.Names()
+			placeholder string   = placeholder
+		)
+		var prefixed string
+		for i, name := range names {
+			if name == "" {
+				continue
+			}
+			prefix := ""
+			if len(name) == 1 {
+				prefix = "-"
+			} else {
+				prefix = "--"
+			}
+			prefixed += prefix + name
+			if placeholder != "" {
+				prefixed += " " + "{yellow}" + placeholder + "{/yellow}"
+			}
+			if i < len(names)-1 {
+				prefixed += ", "
+			}
+		}
+
+		return prefixed
+	}()
+	sliceFlag, ok := f.(cli.DocGenerationMultiValueFlag)
+	if ok && sliceFlag.IsMultiValueFlag() {
+		pn = pn + " [ " + pn + " ]"
+	}
+	pn = "{bluebright}" + pn + "{/bluebright}"
+
+	/// no withEnvHint cause we dont care about env
+	/// the entire point of copying this
+	l := len(oigiki.StripTags(pn))
+	p := strings.Repeat(" ", 40-l) /// ugly ugly hardcoded length
+	return fmt.Sprintf("%s%s%s", oigiki.ProcessTags(pn), p, usageWithDefault)
 }
