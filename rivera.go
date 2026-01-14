@@ -44,9 +44,7 @@ import (
 
 const (
 	DATE_FMT = "2006-01-02 15:04"
-)
-
-const commandHelpTemplate = `Name:
+	commandHelpTemplate = `Name:
    {bold}{green}{{.Name}} {/}- {blue}{{.Usage}}{/}
 
 Usage:
@@ -58,6 +56,7 @@ Options:{blue}
 Version:
    {green}v{{.Version}}
 `
+)
 
 // regex
 var (
