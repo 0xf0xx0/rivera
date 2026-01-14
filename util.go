@@ -188,9 +188,9 @@ func stolenFlagStringer(f cli.Flag) string {
 	if rf, ok := f.(cli.RequiredFlag); !ok || !rf.IsRequired() {
 		if df.IsDefaultVisible() {
 			if s := df.GetDefaultText(); s != "" {
-				defaultValueString = fmt.Sprintf(" (default: %s)", s)
+				defaultValueString = fmt.Sprintf(" (default: {green}%s{/})", s)
 			} else if df.TakesValue() && df.GetValue() != "" {
-				defaultValueString = fmt.Sprintf(" (default: %s)", df.GetValue())
+				defaultValueString = fmt.Sprintf(" (default: {green}%s{/})", df.GetValue())
 			}
 		}
 	}
@@ -235,5 +235,5 @@ func stolenFlagStringer(f cli.Flag) string {
 	/// the entire point of copying this
 	l := len(oigiki.StripTags(pn))
 	p := strings.Repeat(" ", 40-l) /// ugly ugly hardcoded length
-	return fmt.Sprintf("%s%s%s", oigiki.ProcessTags(pn), p, usageWithDefault)
+	return fmt.Sprintf("%s%s%s", oigiki.ProcessTags(pn), p, oigiki.ProcessTags(usageWithDefault))
 }
