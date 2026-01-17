@@ -87,9 +87,9 @@ var (
 )
 
 var config = struct {
-	repoPath, userStyle          string
-	hashLen, style, subvineDepth uint8
-	leftMargin, rightMargin      uint8
+	repoPath, userStyle                  string
+	hashLen, msgLen, style, subvineDepth uint8
+	leftMargin, rightMargin              uint8
 	reverse, smoothOverpass,
 	displayStatus, displayAll bool
 }{}
@@ -155,6 +155,12 @@ func main() {
 				Value:   8,
 			},
 			&cli.Uint8Flag{
+				Name:    "messagelength",
+				Usage:   "`len`gth of the commit message",
+				Aliases: []string{"msglen"},
+				Value:   50, /// 50/72 rule
+			},
+			&cli.Uint8Flag{
 				Name:    "style",
 				Usage:   "style `num` to select (1-5)",
 				Aliases: []string{"s"},
@@ -185,9 +191,9 @@ func main() {
 				Value:   false,
 			},
 			&cli.BoolFlag{
-				Name:    "smooth-overpass",
-				Usage:   "convert ODODO overpasses to OOOOO",
-				Value:   false,
+				Name:  "smooth-overpass",
+				Usage: "convert ODODO overpasses to OOOOO",
+				Value: false,
 			},
 			&cli.BoolFlag{
 				Name:    "reverse",
@@ -238,6 +244,7 @@ func main() {
 			config.smoothOverpass = ctx.Bool("smooth-overpass")
 			config.style = ctx.Uint8("style")
 			config.hashLen = ctx.Uint8("hashlength")
+			config.msgLen = ctx.Uint8("messagelength")
 			config.leftMargin = ctx.Uint8("graphmarginleft")
 			config.rightMargin = ctx.Uint8("graphmarginright")
 			config.subvineDepth = ctx.Uint8("svdepth")
@@ -275,7 +282,8 @@ func processCommits() error {
 		}
 	}
 
-	/// MAYBE: make option...? this might be something im too lazy to do
+	/// i dont understand the point of havin this be customizable in git-foresta,
+	/// it breaks when you change it
 	PRETTY := "%H\t%at\t%an\t%C(reset)%C(auto)%d%C(reset)\t%s"
 
 	cmd := exec.Command("git", "-C", config.repoPath,
@@ -354,10 +362,8 @@ func processCommits() error {
 		}
 		ret.WriteString(autoRefs)
 		ret.WriteString("{/} ")
-		/// 50/72 rule
-		limit := 50
-		if len(message) > limit{
-			ret.WriteString(message[:limit])
+		if len(message) > int(config.msgLen) {
+			ret.WriteString(message[:int(config.msgLen)])
 			ret.WriteString("...")
 		} else {
 			ret.WriteString(message)
@@ -759,24 +765,24 @@ func visFan3(l, r string) string {
 // graph chars and returned
 func visXfrm(line string) string {
 	/* NOTE: from original perl:
-	# A: branch to right
-	# B: branch to left
-	# C: commit
-	# M: merge commit
-	# D: overpass over empty space
-	# e: merge visual left (╔)
-	# f: merge visual center (╦)
-	# g: merge visual right (╗)
-	# I: straight line (║)
-	# K: branch visual split (╬)
-	# m: single line (─)
-	# O: overpass (≡)
-	# r: root (╙)
-	# t: tip (╓)
-	# x: branch visual left (╚)
-	# y: branch visual center (╩)
-	# z: branch visual right (╝)
-	# *: filler
+		# A: branch to right
+		# B: branch to left
+		# C: commit
+		# M: merge commit
+		# D: overpass over empty space
+		# e: merge visual left (╔)
+		# f: merge visual center (╦)
+		# g: merge visual right (╗)
+		# I: straight line (║)
+		# K: branch visual split (╬)
+		# m: single line (─)
+		# O: overpass (≡)
+		# r: root (╙)
+		# t: tip (╓)
+		# x: branch visual left (╚)
+		# y: branch visual center (╩)
+		# z: branch visual right (╝)
+		# *: filler
 	*/
 	if config.reverse {
 		line = tr(line, "efg.xyz.tr", "xyz.efg.rt")
@@ -865,7 +871,6 @@ func visXfrm(line string) string {
 			colorHints[offset] = getBranchColor(offset - 1)
 		} else if matches := rightzI.FindStringSubmatch(line); len(matches) > 0 {
 			offset := offsetHelper(strings.Index(line, matches[1]))
-			/// TODO: none of my repos have a z...I, does this also need to clear colorHints?
 			colorHints[offset] = getBranchColor(offset)
 		}
 
@@ -920,7 +925,8 @@ func visXfrm(line string) string {
 			line = tr(line, styleReplace, "┣┫━━.┏┳┓.┃╋━.┗┻┛.┳┣┣┻")
 		}
 	}
-	/// TODO: user-defined replace
+
+	/// TODO: finish implementing
 	if config.userStyle != "" {
 		line = tr(line, styleReplace, config.userStyle)
 	}
