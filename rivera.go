@@ -69,6 +69,7 @@ var (
 	fanLM         = regexp.MustCompile(`(s.*)S`)
 	fanMR         = regexp.MustCompile(`S(.*s)`)
 	/// fmt pt 2
+	leftcii = regexp.MustCompile(`(C|I)II`)
 	leftxB  = regexp.MustCompile(`(x\w*B)`)
 	leftgI  = regexp.MustCompile(`(g\w*I)`)
 	leftAg  = regexp.MustCompile(`A(\w*g)`)
@@ -786,8 +787,15 @@ func visXfrm(line string) string {
 
 	/// color branches and overpasses based on source
 	/// TODO: find a better way to color reverse output? duplicating the whole block is annoying
-	/// FIXME: padding in-between branches is colored wrong, run on lmms/lmms#9fc64418 -C 2
+
+	/// NOTE: edge case: padding that ends up between vines adopts the wrong color
 	/// patterns: CII? II<spc>/<spc>II?
+	if matches := leftcii.FindStringSubmatch(line); len(matches) > 0 {
+		/// the middle I needs to have the same color as the last
+		idx := strings.Index(line, matches[0]) + 1
+		offset := offsetHelper(idx)
+		colorHints[idx] = getBranchColor(offset)
+	}
 
 	/// FIXME: e...e/x...x??? needs to be e...g/x...z lmms/lmms#5e6066e6/12c6ec25 -A 2
 	/// offset is the index into the vines array,
