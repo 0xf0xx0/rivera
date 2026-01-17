@@ -275,7 +275,7 @@ func processCommits() error {
 		}
 	}
 
-	/// TODO: make option...? this might be something im too lazy to do
+	/// MAYBE: make option...? this might be something im too lazy to do
 	PRETTY := "%H\t%at\t%an\t%C(reset)%C(auto)%d%C(reset)\t%s"
 
 	cmd := exec.Command("git", "-C", config.repoPath,
@@ -354,10 +354,10 @@ func processCommits() error {
 		}
 		ret.WriteString(autoRefs)
 		ret.WriteString("{/} ")
-		/// TODO: dynamic width
 		/// 50/72 rule
-		if len(message) > 72 {
-			ret.WriteString(message[:72])
+		limit := 50
+		if len(message) > limit{
+			ret.WriteString(message[:limit])
 			ret.WriteString("...")
 		} else {
 			ret.WriteString(message)
@@ -780,8 +780,6 @@ func visXfrm(line string) string {
 	*/
 	if config.reverse {
 		line = tr(line, "efg.xyz.tr", "xyz.efg.rt")
-		/// TODO: option to not flip tip and root char?
-		// line = tr(line, "efg.xyz", "xyz.efg")
 	}
 
 	colorHints := make([]string, len(line))
