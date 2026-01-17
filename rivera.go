@@ -43,7 +43,7 @@ import (
 )
 
 const (
-	DATE_FMT = "2006-01-02 15:04"
+	DATE_FMT            = "2006-01-02 15:04"
 	commandHelpTemplate = `Name:
    {bold}{green}{{.Name}} {/}- {blue}{{.Usage}}{/}
 
@@ -250,17 +250,17 @@ func processCommits() error {
 	vine := make([]string, 0, config.subvineDepth)
 	refMap, err := getRefs()
 	if err != nil {
-		return cli.Exit(err.Error(), 1)
+		return cli.Exit(fmtGitErr(nil, err), 1)
 	}
 	status, err := getStatus()
 	if err != nil {
-		return cli.Exit(err.Error(), 1)
+		return cli.Exit(fmtGitErr(nil, err), 1)
 	}
 
 	/// TODO: make option...? this might be something im too lazy to do
 	PRETTY := "%H\t%at\t%an\t%C(reset)%C(auto)%d%C(reset)\t%s"
 
-	cmd := exec.Command("git", "--git-dir="+config.repoPath,
+	cmd := exec.Command("git", "-C", config.repoPath,
 		"log", "--date-order", "--pretty=format:<%H><%h><%P>"+PRETTY)
 	if config.displayAll {
 		cmd.Args = append(cmd.Args, "--all", "HEAD")
@@ -275,7 +275,7 @@ func processCommits() error {
 	}
 
 	if err := cmd.Start(); err != nil {
-		return cli.Exit(err.Error(), 1)
+		return cli.Exit(fmtGitErr(cmd, err), 1)
 	}
 	reader := bufio.NewReader(stdout)
 
@@ -363,16 +363,30 @@ func processCommits() error {
 	return nil
 }
 
+func fmtGitErr(cmd *exec.Cmd, err error) string {
+	if cmd != nil && cmd.Stderr != nil {
+		return fmt.Sprintf("%s\n%s", cmd.Stderr, err)
+	}
+
+	ee, ok := err.(*exec.ExitError)
+	if ok {
+		return fmt.Sprintf("%s\n%d", ee.Error(), ee.ExitCode())
+	}
+	return err.Error()
+}
+
 func getRefs() (map[string][]string, error) {
 	m := make(map[string][]string, 32)
-	cmd := exec.Command("git", "--git-dir="+config.repoPath, "show-ref")
+	cmd := exec.Command("git", "-C", config.repoPath, "show-ref")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return m, cli.Exit(err.Error(), 1)
 	}
+
 	if err := cmd.Start(); err != nil {
-		return m, cli.Exit(err.Error(), 1)
+		return m, cli.Exit(fmtGitErr(cmd, err), 1)
 	}
+
 	reader := bufio.NewScanner(stdout)
 	for reader.Scan() {
 		line := reader.Text()
@@ -393,12 +407,12 @@ func getStatus() (string, error) {
 	dirty := ""
 	midFlow := ""
 
-	hasChangeUnstagedCmd := exec.Command("git", "--git-dir="+config.repoPath, "diff", "--shortstat")
-	hasChangeStagedCmd := exec.Command("git", "--git-dir="+config.repoPath, "diff", "--shortstat", "--cached")
-	hasStashCmd := exec.Command("git", "--git-dir="+config.repoPath, "stash", "list")
-	hasUntrackedCmd := exec.Command("git", "--git-dir="+config.repoPath, "ls-files", "--others", "--exclude-standard")
+	hasChangeUnstagedCmd := exec.Command("git", "-C", config.repoPath, "diff", "--shortstat")
+	hasChangeStagedCmd := exec.Command("git", "-C", config.repoPath, "diff", "--shortstat", "--cached")
+	hasStashCmd := exec.Command("git", "-C", config.repoPath, "stash", "list")
+	hasUntrackedCmd := exec.Command("git", "-C", config.repoPath, "ls-files", "--others", "--exclude-standard")
 
-	x, err := hasChangeUnstagedCmd.Output()
+	x, err := hasChangeUnstagedCmd.CombinedOutput()
 	if err != nil {
 		return "", err
 	}
@@ -729,24 +743,24 @@ func visFan3(l, r string) string {
 // graph chars and returned
 func visXfrm(line string) string {
 	/* NOTE: from original perl:
-			# A: branch to right
-			# B: branch to left
-			# C: commit
-			# M: merge commit
-			# D: overpass over empty space
-			# e: merge visual left (╔)
-			# f: merge visual center (╦)
-			# g: merge visual right (╗)
-			# I: straight line (║)
-			# K: branch visual split (╬)
-			# m: single line (─)
-			# O: overpass (≡)
-			# r: root (╙)
-			# t: tip (╓)
-			# x: branch visual left (╚)
-			# y: branch visual center (╩)
-			# z: branch visual right (╝)
-			# *: filler
+	# A: branch to right
+	# B: branch to left
+	# C: commit
+	# M: merge commit
+	# D: overpass over empty space
+	# e: merge visual left (╔)
+	# f: merge visual center (╦)
+	# g: merge visual right (╗)
+	# I: straight line (║)
+	# K: branch visual split (╬)
+	# m: single line (─)
+	# O: overpass (≡)
+	# r: root (╙)
+	# t: tip (╓)
+	# x: branch visual left (╚)
+	# y: branch visual center (╩)
+	# z: branch visual right (╝)
+	# *: filler
 	*/
 	if config.reverse {
 		line = tr(line, "efg.xyz.tr", "xyz.efg.rt")

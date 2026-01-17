@@ -123,7 +123,7 @@ func recursivelyLookForGitRoot(path string, maxDepth uint) (string, error) {
 	potentialRoot := filepath.Join(path, "./.git")
 	/// [1:] because fs.root doesnt treat base / as root
 	if fileExists(potentialRoot[1:]) {
-		return potentialRoot, nil
+		return path, nil
 	}
 	maxDepth--
 	path = filepath.Dir(path)
