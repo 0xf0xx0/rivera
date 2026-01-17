@@ -765,6 +765,8 @@ func visXfrm(line string) string {
 
 	/// color branches and overpasses based on source
 	/// TODO: find a better way to color reverse output? duplicating the whole block is annoying
+	/// offset is the index into the vines array,
+	/// idx is the actual printed index
 	if config.reverse {
 		if matches := leftxB.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
@@ -785,8 +787,9 @@ func visXfrm(line string) string {
 			offset := offsetHelper(idx)
 			colorHints[idx] = getBranchColor(offset)
 		} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
-			offset := offsetHelper(strings.Index(line, matches[1]))
-			colorHints[offset] = getBranchColor(offset)
+			idx := strings.Index(line, matches[1])
+			offset := offsetHelper(idx)
+			colorHints[idx-1] = getBranchColor(offset)
 		} else if matches := rightzI.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
 			offset := offsetHelper(idx)
