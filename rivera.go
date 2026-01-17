@@ -735,7 +735,7 @@ func visFan3(l, r string) string {
 	sb := strings.Builder{}
 	sb.WriteString(visFan2L(l))
 	sb.WriteRune('K')
-	sb.WriteString(visFan2L(r))
+	sb.WriteString(visFan2R(r))
 	return sb.String()
 }
 
