@@ -250,8 +250,13 @@ func main() {
 			config.rightMargin = ctx.Uint8("graphmarginright")
 			config.subvineDepth = ctx.Uint8("svdepth")
 			global_branchColors = strings.Split(ctx.String("branchcolors"), ",")
-			for color := range global_branchColors {
-				global_branchColors[color] = strings.TrimSpace(cleanLine(global_branchColors[color]))
+			for idx, color := range global_branchColors {
+				color = strings.TrimSpace(cleanLine(color))
+				_, tagType := oigiki.GetTagEscapeCode(color)
+				if tagType == oigiki.TagTypeUnknown {
+					return cli.Exit(fmt.Sprintf("invalid branch color: %q", color), 1)
+				}
+				global_branchColors[idx] = color
 			}
 
 			//////
@@ -766,24 +771,24 @@ func visFan3(l, r string) string {
 // graph chars and returned
 func visXfrm(line string) string {
 	/* NOTE: from original perl:
-		# A: branch to right
-		# B: branch to left
-		# C: commit
-		# M: merge commit
-		# D: overpass over empty space
-		# e: merge visual left (╔)
-		# f: merge visual center (╦)
-		# g: merge visual right (╗)
-		# I: straight line (║)
-		# K: branch visual split (╬)
-		# m: single line (─)
-		# O: overpass (≡)
-		# r: root (╙)
-		# t: tip (╓)
-		# x: branch visual left (╚)
-		# y: branch visual center (╩)
-		# z: branch visual right (╝)
-		# *: filler
+	# A: branch to right
+	# B: branch to left
+	# C: commit
+	# M: merge commit
+	# D: overpass over empty space
+	# e: merge visual left (╔)
+	# f: merge visual center (╦)
+	# g: merge visual right (╗)
+	# I: straight line (║)
+	# K: branch visual split (╬)
+	# m: single line (─)
+	# O: overpass (≡)
+	# r: root (╙)
+	# t: tip (╓)
+	# x: branch visual left (╚)
+	# y: branch visual center (╩)
+	# z: branch visual right (╝)
+	# *: filler
 	*/
 	if config.reverse {
 		line = tr(line, "efg.xyz.tr", "xyz.efg.rt")
