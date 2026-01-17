@@ -86,10 +86,10 @@ var (
 )
 
 var config = struct {
-	repoPath                     string
-	hashLen, style, subvineDepth uint8
-	leftMargin, rightMargin      uint8
-	reverse, displayAll          bool
+	repoPath                           string
+	hashLen, style, subvineDepth       uint8
+	leftMargin, rightMargin            uint8
+	reverse, displayStatus, displayAll bool
 }{}
 
 var buildCommit = func() string {
@@ -188,6 +188,11 @@ func main() {
 				Aliases: []string{"r"},
 				Value:   false,
 			},
+			&cli.BoolWithInverseFlag{
+				Name:  "status",
+				Usage: "display the git status",
+				Value: false,
+			},
 			&cli.StringFlag{
 				Name:  "branchcolors",
 				Usage: "comma separated `color,color[,color]` used for branches, passed straight to oigiki",
@@ -222,6 +227,7 @@ func main() {
 			config.repoPath = repoRoot
 			config.displayAll = ctx.Bool("all")
 			config.reverse = !ctx.Bool("reverse")
+			config.displayStatus = ctx.Bool("status")
 			config.style = ctx.Uint8("style")
 			config.hashLen = ctx.Uint8("hashlength")
 			config.leftMargin = ctx.Uint8("graphmarginleft")
@@ -253,9 +259,12 @@ func processCommits() error {
 	if err != nil {
 		return cli.Exit(fmtGitErr(nil, err), 1)
 	}
-	status, err := getStatus()
-	if err != nil {
-		return cli.Exit(fmtGitErr(nil, err), 1)
+	status := ""
+	if config.displayStatus {
+		status, err = getStatus()
+		if err != nil {
+			return cli.Exit(fmtGitErr(nil, err), 1)
+		}
 	}
 
 	/// TODO: make option...? this might be something im too lazy to do
@@ -396,7 +405,7 @@ func getRefs() (map[string][]string, error) {
 		return m, cli.Exit(err.Error(), 1)
 	}
 
-	/// TODO: the rest of the rebaes stuff
+	/// TODO: the rest of the rebase stuff, but im lazy
 	return m, nil
 }
 func getStatus() (string, error) {
