@@ -43,6 +43,7 @@ import (
 )
 
 const (
+	styleReplace        = "ABDO.efg.IKm.xyz.tCMr"
 	DATE_FMT            = "2006-01-02 15:04"
 	commandHelpTemplate = `Name:
    {bold}{green}{{.Name}} {/}- {blue}{{.Usage}}{/}
@@ -86,7 +87,7 @@ var (
 )
 
 var config = struct {
-	repoPath                           string
+	repoPath, userStyle                string
 	hashLen, style, subvineDepth       uint8
 	leftMargin, rightMargin            uint8
 	reverse, displayStatus, displayAll bool
@@ -232,7 +233,7 @@ func main() {
 			config.hashLen = ctx.Uint8("hashlength")
 			config.leftMargin = ctx.Uint8("graphmarginleft")
 			config.rightMargin = ctx.Uint8("graphmarginright")
-			config.subvineDepth = ctx.Uint8("svdepth") + 1 /// TODO: figure out why +1
+			config.subvineDepth = ctx.Uint8("svdepth")
 			global_branchColors = strings.Split(ctx.String("branchcolors"), ",")
 			for color := range global_branchColors {
 				global_branchColors[color] = strings.TrimSpace(cleanLine(global_branchColors[color]))
@@ -347,7 +348,7 @@ func processCommits() error {
 		ret.WriteString(autoRefs)
 		ret.WriteString("{/} ")
 		/// TODO: dynamic width
-		/// NOTE: 50/72 rule
+		/// 50/72 rule
 		if len(message) > 72 {
 			ret.WriteString(message[:72])
 			ret.WriteString("...")
@@ -596,7 +597,7 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) string {
 			pos := -1
 			if idx < originalColumn {
 				pos = idx + 1
-				/// TODO: is empty string "undefined"?
+				/// NOTE: empty string = undef
 				if (*vine)[pos] != "" {
 					pos = idx - 1
 				}
@@ -614,7 +615,7 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) string {
 			}
 
 			(*vine)[pos] = parents[j]
-			/// TODO: maybe fixme?
+			/// idk y +1 but weh
 			strExpand(&output, pos+1)
 			replaceAt(&output, "s", pos)
 			parents = append(parents[:j], parents[j+1:]...)
@@ -643,7 +644,7 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) string {
 	}
 	for idx := originalColumn + 2; parentCounter < len(parents)-1; idx += 2 {
 		// fmt.Printf("%q, %d, %d %d\n", *vine, idx, parentCounter, len(parents))
-		/// TODO: is this how we interpret `undef`?
+		/// NOTE: this is how we interpret `undef` usually
 		if idx >= len(*vine) || (*vine)[idx] == "" {
 			slot = append(slot, idx)
 			parentCounter++
@@ -883,34 +884,40 @@ func visXfrm(line string) string {
 
 	/// now replace with graph chars
 	switch config.style {
+	/// no replace
+	case 0:
+		break
 	/// thin
 	case 1:
 		{
-			line = tr(line, "ABDO.efg.IKm.xyz.tCMr", "├┤──.┌┬┐.│┼─.└┴┘.┬├├┴")
+			line = tr(line, styleReplace, "├┤──.┌┬┐.│┼─.└┴┘.┬├├┴")
 		}
 	/// thin with double bridge
 	case 2:
 		{
-			line = tr(line, "ABDO.efg.IKm.xyz.tCMr", "╞╡═╪.╒╤╕.│┼─.╘╧╛.┬├├┴")
+			line = tr(line, styleReplace, "╞╡═╪.╒╤╕.│┼─.╘╧╛.┬├├┴")
 		}
 	/// idk why the perl used 10 and 15, like ???
 	/// double
 	case 3:
 		{
-			line = tr(line, "ABDO.efg.IKm.xyz.tCMr", "╠╣══.╔╦╗.║╬─.╚╩╝.╓║║╙")
+			line = tr(line, styleReplace, "╠╣══.╔╦╗.║╬─.╚╩╝.╓║║╙")
 		}
 	/// curves
 	case 4:
 		{
-			line = tr(line, "ABDO.efg.IKm.xyz.tCMr", "├┤──.╭┬╮.│┼─.╰┴╯.┬├├┴")
+			line = tr(line, styleReplace, "├┤──.╭┬╮.│┼─.╰┴╯.┬├├┴")
 		}
 	/// thicc
 	case 5:
 		{
-			line = tr(line, "ABDO.efg.IKm.xyz.tCMr", "┣┫━━.┏┳┓.┃╋━.┗┻┛.┳┣┣┻")
+			line = tr(line, styleReplace, "┣┫━━.┏┳┓.┃╋━.┗┻┛.┳┣┣┻")
 		}
 	}
 	/// TODO: user-defined replace
+	if config.userStyle != "" {
+		line = tr(line, styleReplace, config.userStyle)
+	}
 
 	/// finally, actually color the string using the hints
 	sb := strings.Builder{}
