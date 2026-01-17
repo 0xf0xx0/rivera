@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -142,6 +143,18 @@ func tr(source string, from, to string) string {
 		}
 	}
 	return b.String()
+}
+
+func fmtGitErr(cmd *exec.Cmd, err error) string {
+	if cmd != nil && cmd.Stderr != nil {
+		return fmt.Sprintf("%s\n%s", cmd.Stderr, err)
+	}
+
+	ee, ok := err.(*exec.ExitError)
+	if ok {
+		return fmt.Sprintf("%s\n%d", ee.Error(), ee.ExitCode())
+	}
+	return err.Error()
 }
 
 // STOLEN EVILLY from urfave/cli

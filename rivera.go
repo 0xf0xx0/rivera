@@ -371,18 +371,6 @@ func processCommits() error {
 	return nil
 }
 
-func fmtGitErr(cmd *exec.Cmd, err error) string {
-	if cmd != nil && cmd.Stderr != nil {
-		return fmt.Sprintf("%s\n%s", cmd.Stderr, err)
-	}
-
-	ee, ok := err.(*exec.ExitError)
-	if ok {
-		return fmt.Sprintf("%s\n%d", ee.Error(), ee.ExitCode())
-	}
-	return err.Error()
-}
-
 func getRefs() (map[string][]string, error) {
 	m := make(map[string][]string, 32)
 	cmd := exec.Command("git", "-C", config.repoPath, "show-ref")
@@ -786,10 +774,8 @@ func visXfrm(line string) string {
 	}
 
 	/// color branches and overpasses based on source
-	/// TODO: find a better way to color reverse output? duplicating the whole block is annoying
-
 	/// NOTE: edge case: padding that ends up between vines adopts the wrong color
-	/// patterns: CII? II<spc>/<spc>II?
+	/// patterns: CII? IIC? II<spc>/<spc>II?
 	if matches := leftcii.FindStringSubmatch(line); len(matches) > 0 {
 		/// the middle I needs to have the same color as the last
 		idx := strings.Index(line, matches[0]) + 1
@@ -797,9 +783,9 @@ func visXfrm(line string) string {
 		colorHints[idx] = getBranchColor(offset)
 	}
 
-	/// FIXME: e...e/x...x??? needs to be e...g/x...z lmms/lmms#5e6066e6/12c6ec25 -A 2
 	/// offset is the index into the vines array,
 	/// idx is the actual printed index
+	/// TODO: find a better way to color reverse output? duplicating the whole block is annoying
 	if config.reverse {
 		if matches := leftxB.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
