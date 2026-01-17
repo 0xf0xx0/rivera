@@ -338,8 +338,10 @@ func processCommits() error {
 		ret.WriteString(fmt.Sprintf("%s{yellow}%s",
 			strings.Repeat(" ", int(config.rightMargin)), author))
 		if _, ok := refMap[sha]; ok {
-			/// TODO: /HEAD
-			autoRefs = strings.Replace(autoRefs, "HEAD", "HEAD"+status, 1)
+			/// only print the status on the local HEAD
+			if strings.Index(autoRefs, "/HEAD") == -1 {
+				autoRefs = strings.Replace(autoRefs, "HEAD", "HEAD"+status, 1)
+			}
 			autoRefs = strings.ReplaceAll(autoRefs, "tag:", "{magenta}tag:{/magenta}")
 		}
 		ret.WriteString(autoRefs)
