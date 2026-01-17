@@ -334,7 +334,14 @@ func processCommits() error {
 		}
 		ret.WriteString(autoRefs)
 		ret.WriteString("{/} ")
-		ret.WriteString(message)
+		/// TODO: dynamic width
+		/// NOTE: 50/72 rule
+		if len(message) > 72 {
+			ret.WriteString(message[:72])
+			ret.WriteString("...")
+		} else {
+			ret.WriteString(message)
+		}
 		ret.WriteRune('\n')
 
 		ret.WriteString(vineMerge(&vine, sha, nextShas, parents))
@@ -779,6 +786,10 @@ func visXfrm(line string) string {
 
 	/// color branches and overpasses based on source
 	/// TODO: find a better way to color reverse output? duplicating the whole block is annoying
+	/// FIXME: padding in-between branches is colored wrong, run on lmms/lmms#9fc64418 -C 2
+	/// patterns: CII? II<spc>/<spc>II?
+
+	/// FIXME: e...e/x...x??? needs to be e...g/x...z lmms/lmms#5e6066e6/12c6ec25 -A 2
 	/// offset is the index into the vines array,
 	/// idx is the actual printed index
 	if config.reverse {
