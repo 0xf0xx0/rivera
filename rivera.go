@@ -147,6 +147,7 @@ func main() {
 				Aliases: []string{"repo"},
 				Value:   ".",
 			},
+			/// TODO: user-defined graph chars
 			/// MAYBE: --starting-revision/--rev flag for startting at a commit? same for end?
 			&cli.Uint8Flag{
 				Name:    "hashlength",
@@ -201,7 +202,7 @@ func main() {
 				Aliases: []string{"r"},
 				Value:   false,
 			},
-			&cli.BoolWithInverseFlag{
+			&cli.BoolFlag{
 				Name:  "status",
 				Usage: "display the git status",
 				Value: false,
