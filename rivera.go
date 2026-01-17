@@ -87,10 +87,11 @@ var (
 )
 
 var config = struct {
-	repoPath, userStyle                string
-	hashLen, style, subvineDepth       uint8
-	leftMargin, rightMargin            uint8
-	reverse, displayStatus, displayAll bool
+	repoPath, userStyle          string
+	hashLen, style, subvineDepth uint8
+	leftMargin, rightMargin      uint8
+	reverse, smoothOverpass,
+	displayStatus, displayAll bool
 }{}
 
 var buildCommit = func() string {
@@ -184,6 +185,11 @@ func main() {
 				Value:   false,
 			},
 			&cli.BoolFlag{
+				Name:    "smooth-overpass",
+				Usage:   "convert ODODO overpasses to OOOOO",
+				Value:   false,
+			},
+			&cli.BoolFlag{
 				Name:    "reverse",
 				Usage:   "reverse the flow",
 				Aliases: []string{"r"},
@@ -229,6 +235,7 @@ func main() {
 			config.displayAll = ctx.Bool("all")
 			config.reverse = !ctx.Bool("reverse")
 			config.displayStatus = ctx.Bool("status")
+			config.smoothOverpass = ctx.Bool("smooth-overpass")
 			config.style = ctx.Uint8("style")
 			config.hashLen = ctx.Uint8("hashlength")
 			config.leftMargin = ctx.Uint8("graphmarginleft")
@@ -697,10 +704,11 @@ func visFan(line, visType string) string {
 	line = fanRegex.ReplaceAllStringFunc(line, func(match string) string {
 		return tr(match, " I", "DO")
 	})
-	/// TODO: remove? make an option?
-	// s = overpassRegex.ReplaceAllStringFunc(s, func(x string) string {
-	// 	return strings.Repeat("O", len(x))
-	// })
+	if config.smoothOverpass {
+		line = overpassRegex.ReplaceAllStringFunc(line, func(match string) string {
+			return strings.Repeat("O", len(match))
+		})
+	}
 
 	/// match the various fan patterns
 	if matches := fanLMR.FindStringSubmatch(line); len(matches) > 0 {
