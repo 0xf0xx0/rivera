@@ -307,6 +307,7 @@ func processCommits() error {
 	}
 
 	if err := cmd.Start(); err != nil {
+		fmt.Println(stdout)
 		return cli.Exit(fmtGitErr(cmd, err), 1)
 	}
 	reader := bufio.NewReader(stdout)
@@ -424,8 +425,11 @@ func getRefs() (map[string][]string, error) {
 		m[split[0]] = append(m[split[0]], split[1])
 	}
 	if err := cmd.Wait(); err != nil {
-		return m, cli.Exit(err.Error(), 1)
+		println("weh")
+		return m, cli.Exit(fmtGitErr(cmd, err), 1)
 	}
+	println("wehhh")
+
 
 	/// TODO: the rest of the rebase stuff, but im lazy
 	return m, nil
@@ -439,8 +443,9 @@ func getStatus() (string, error) {
 	hasStashCmd := exec.Command("git", "-C", config.repoPath, "stash", "list")
 	hasUntrackedCmd := exec.Command("git", "-C", config.repoPath, "ls-files", "--others", "--exclude-standard")
 
-	x, err := hasChangeUnstagedCmd.CombinedOutput()
+	x, err := hasChangeUnstagedCmd.Output()
 	if err != nil {
+		fmt.Println(x)
 		return "", err
 	}
 	/// unstaged

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -144,7 +145,7 @@ func tr(source string, from, to string) string {
 	}
 	return b.String()
 }
-
+// FIXME: its bbroken and doesnt print the actual error :]]]]]]]]]]
 func fmtGitErr(cmd *exec.Cmd, err error) string {
 	if cmd != nil && cmd.Stderr != nil {
 		return fmt.Sprintf("%s\n%s", cmd.Stderr, err)
@@ -152,9 +153,10 @@ func fmtGitErr(cmd *exec.Cmd, err error) string {
 
 	ee, ok := err.(*exec.ExitError)
 	if ok {
-		return fmt.Sprintf("%s\n%d", ee.Error(), ee.ExitCode())
+		return fmt.Sprintf("%s\n%s", ee.Stderr, ee.Error())
 	}
-	return err.Error()
+
+	return "generic error: "+err.Error()
 }
 
 // STOLEN EVILLY from urfave/cli
