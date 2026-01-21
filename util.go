@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -145,6 +144,7 @@ func tr(source string, from, to string) string {
 	}
 	return b.String()
 }
+
 // FIXME: its bbroken and doesnt print the actual error :]]]]]]]]]]
 func fmtGitErr(cmd *exec.Cmd, err error) string {
 	if cmd != nil && cmd.Stderr != nil {
@@ -156,7 +156,7 @@ func fmtGitErr(cmd *exec.Cmd, err error) string {
 		return fmt.Sprintf("%s\n%s", ee.Stderr, ee.Error())
 	}
 
-	return "generic error: "+err.Error()
+	return "generic error: " + err.Error()
 }
 
 // STOLEN EVILLY from urfave/cli

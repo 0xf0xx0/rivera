@@ -9,6 +9,7 @@
 - persistent branch coloring
 - `--repository` option to pass a path (no more needing to cd beforepaw)
 - a bit more control over overpasses (no more ODODO -> OOOOO)
+- accepts git args (`git-rivera --rivera-arg -- --git-arg, --git-arg-2`)
 
 ## install
 

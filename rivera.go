@@ -81,6 +81,7 @@ var (
 
 // global
 var (
+	global_gitArgs               []string
 	global_commitBuffer          []string
 	global_branchColors          []string /// populated in flag
 	global_root, global_repoRoot fs.FS
@@ -120,7 +121,6 @@ func main() {
 		Version:                "1.0.0+g" + buildCommit,
 		Usage:                  "display the git river, like git-forest",
 		UseShortOptionHandling: true,
-		/// TODO: pass unknown flags to git
 		MutuallyExclusiveFlags: []cli.MutuallyExclusiveFlags{
 			{
 				Flags: [][]cli.Flag{
@@ -148,7 +148,6 @@ func main() {
 				Value:   ".",
 			},
 			/// TODO: user-defined graph chars
-			/// MAYBE: --starting-revision/--rev flag for startting at a commit? same for end?
 			&cli.Uint8Flag{
 				Name:    "hashlength",
 				Usage:   "`len`gth of the commit hash",
@@ -221,7 +220,6 @@ func main() {
 		},
 		Action: func(_ context.Context, ctx *cli.Command) error {
 			oigiki.NoColor = !term.IsTerminal(int(os.Stdout.Fd()))
-
 			if ctx.Bool("color") {
 				oigiki.NoColor = false
 			} else if ctx.Bool("nocolor") {
@@ -238,6 +236,7 @@ func main() {
 			/// yyyyyyoink
 			global_repoRoot = os.DirFS(repoRoot)
 
+			global_gitArgs = ctx.Args().Slice()
 			config.repoPath = repoRoot
 			config.displayAll = ctx.Bool("all")
 			config.reverse = !ctx.Bool("reverse")
@@ -299,6 +298,9 @@ func processCommits() error {
 	}
 	if !oigiki.NoColor {
 		cmd.Args = append(cmd.Args, "--color")
+	}
+	if len(global_gitArgs) > 0 {
+		cmd.Args = append(cmd.Args, global_gitArgs...)
 	}
 
 	stdout, err := cmd.StdoutPipe()
@@ -428,8 +430,6 @@ func getRefs() (map[string][]string, error) {
 		println("weh")
 		return m, cli.Exit(fmtGitErr(cmd, err), 1)
 	}
-	println("wehhh")
-
 
 	/// TODO: the rest of the rebase stuff, but im lazy
 	return m, nil
@@ -776,24 +776,24 @@ func visFan3(l, r string) string {
 // graph chars and returned
 func visXfrm(line string) string {
 	/* NOTE: from original perl:
-	# A: branch to right
-	# B: branch to left
-	# C: commit
-	# M: merge commit
-	# D: overpass over empty space
-	# e: merge visual left (╔)
-	# f: merge visual center (╦)
-	# g: merge visual right (╗)
-	# I: straight line (║)
-	# K: branch visual split (╬)
-	# m: single line (─)
-	# O: overpass (≡)
-	# r: root (╙)
-	# t: tip (╓)
-	# x: branch visual left (╚)
-	# y: branch visual center (╩)
-	# z: branch visual right (╝)
-	# *: filler
+		# A: branch to right
+		# B: branch to left
+		# C: commit
+		# M: merge commit
+		# D: overpass over empty space
+		# e: merge visual left (╔)
+		# f: merge visual center (╦)
+		# g: merge visual right (╗)
+		# I: straight line (║)
+		# K: branch visual split (╬)
+	    # m: single line (─)
+		# O: overpass (≡)
+		# r: root (╙)
+		# t: tip (╓)
+		# x: branch visual left (╚)
+		# y: branch visual center (╩)
+		# z: branch visual right (╝)
+		# *: filler
 	*/
 	if config.reverse {
 		line = tr(line, "efg.xyz.tr", "xyz.efg.rt")
@@ -820,7 +820,6 @@ func visXfrm(line string) string {
 
 	/// offset is the index into the vines array,
 	/// idx is the actual printed index
-	/// TODO: find a better way to color reverse output? duplicating the whole block is annoying
 	if config.reverse {
 		if matches := leftxB.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
@@ -981,6 +980,7 @@ func visPost(line string) string {
 	return visXfrm(cleanLine(strings.TrimSpace(line)))
 }
 
+// TODO: use the furst color only for the main trunk
 func getBranchColor(n int) string {
 	return global_branchColors[n%len(global_branchColors)]
 }
