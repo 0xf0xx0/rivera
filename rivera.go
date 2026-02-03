@@ -90,8 +90,8 @@ var (
 
 var config = struct {
 	repoPath, userStyle                  string
-	hashLen, msgLen, style, subvineDepth uint8
-	leftMargin, rightMargin              uint8
+	hashLen, msgLen, style, subvineDepth int
+	leftMargin, rightMargin              int
 	reverse, smoothOverpass,
 	displayStatus, displayAll bool
 }{}
@@ -243,12 +243,12 @@ func main() {
 			config.reverse = !ctx.Bool("reverse")
 			config.displayStatus = ctx.Bool("status")
 			config.smoothOverpass = ctx.Bool("smooth-overpass")
-			config.style = ctx.Uint8("style")
-			config.hashLen = max(4, ctx.Uint8("hashlength"))
-			config.msgLen = ctx.Uint8("messagelength")
-			config.leftMargin = ctx.Uint8("graphmarginleft")
-			config.rightMargin = ctx.Uint8("graphmarginright")
-			config.subvineDepth = ctx.Uint8("svdepth")
+			config.style = int(ctx.Uint8("style"))
+			config.hashLen = int(min(max(4, ctx.Uint8("hashlength")), 40))
+			config.msgLen = int(ctx.Uint8("messagelength"))
+			config.leftMargin = int(ctx.Uint8("graphmarginleft"))
+			config.rightMargin = int(ctx.Uint8("graphmarginright"))
+			config.subvineDepth = int(ctx.Uint8("svdepth"))
 			global_branchColors = strings.Split(ctx.String("branchcolors"), ",")
 			for idx, color := range global_branchColors {
 				color = strings.TrimSpace(cleanLine(color))
@@ -321,7 +321,7 @@ func processCommits() error {
 		collectedLines = make([]string, 0, 128)
 	}
 	for {
-		lines, err := getLineBlock(reader, int(config.subvineDepth))
+		lines, err := getLineBlock(reader, config.subvineDepth)
 		if err != nil {
 			return cli.Exit(err.Error(), 1)
 		}
@@ -356,13 +356,13 @@ func processCommits() error {
 		ret.WriteString(vineBranch(&vine, sha))
 
 		ret.WriteString(fmt.Sprintf("{magenta}%s {blue}%s%s",
-			sha[:config.hashLen], t.Format(DATE_FMT), strings.Repeat(" ", int(config.leftMargin)),
+			sha[:config.hashLen], t.Format(DATE_FMT), strings.Repeat(" ", config.leftMargin),
 		))
 
 		ret.WriteString(vineCommit(&vine, sha, parents))
 
 		ret.WriteString(fmt.Sprintf("%s{yellow}%s",
-			strings.Repeat(" ", int(config.rightMargin)), author))
+			strings.Repeat(" ", config.rightMargin), author))
 		if _, ok := refMap[sha]; ok {
 			/// only print the status on the local HEAD
 			if strings.Index(autoRefs, "/HEAD") == -1 {
@@ -372,8 +372,8 @@ func processCommits() error {
 		}
 		ret.WriteString(autoRefs)
 		ret.WriteString("{/} ")
-		if len(message) > int(config.msgLen) {
-			ret.WriteString(message[:int(config.msgLen)])
+		if len(message) > config.msgLen {
+			ret.WriteString(message[:config.msgLen])
 			ret.WriteString("...")
 		} else {
 			ret.WriteString(message)
@@ -543,7 +543,7 @@ func vineBranch(vine *[]string, sha string) string {
 	}
 	removeTrailingBlanks(vine)
 	/// +1 for space between hash and date
-	return fmt.Sprintln(strings.Repeat(" ", int(config.hashLen)+1+len(DATE_FMT)+int(config.leftMargin)) + visPost(visFan(output.String(), "branch")))
+	return fmt.Sprintln(strings.Repeat(" ", config.hashLen+1+len(DATE_FMT)+config.leftMargin) + visPost(visFan(output.String(), "branch")))
 }
 func vineCommit(vine *[]string, sha string, parents []string) string {
 	output := "" /// its too much of a pain to use strings.Builder here
@@ -711,7 +711,7 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) string {
 			replaceAt(&output, " ", i)
 		}
 	}
-	return fmt.Sprintln(strings.Repeat(" ", int(config.hashLen)+1+len(DATE_FMT)+int(config.leftMargin)) + visPost(visFan(output, "merge")))
+	return fmt.Sprintln(strings.Repeat(" ", config.hashLen+1+len(DATE_FMT)+config.leftMargin) + visPost(visFan(output, "merge")))
 }
 
 /// beautification
