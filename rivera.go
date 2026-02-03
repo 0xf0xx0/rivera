@@ -24,6 +24,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"fmt"
 	"io/fs"
@@ -150,7 +151,7 @@ func main() {
 			/// TODO: user-defined graph chars
 			&cli.Uint8Flag{
 				Name:    "hashlength",
-				Usage:   "`len`gth of the commit hash",
+				Usage:   "`len`gth of the commit hash (min: 4)",
 				Aliases: []string{"hashlen", "l"},
 				Value:   8,
 			},
@@ -243,7 +244,7 @@ func main() {
 			config.displayStatus = ctx.Bool("status")
 			config.smoothOverpass = ctx.Bool("smooth-overpass")
 			config.style = ctx.Uint8("style")
-			config.hashLen = ctx.Uint8("hashlength")
+			config.hashLen = max(4, ctx.Uint8("hashlength"))
 			config.msgLen = ctx.Uint8("messagelength")
 			config.leftMargin = ctx.Uint8("graphmarginleft")
 			config.rightMargin = ctx.Uint8("graphmarginright")
@@ -277,13 +278,13 @@ func processCommits() error {
 	vine := make([]string, 0, config.subvineDepth)
 	refMap, err := getRefs()
 	if err != nil {
-		return cli.Exit(fmtGitErr(nil, err), 1)
+		return cli.Exit(err, 1)
 	}
 	status := ""
 	if config.displayStatus {
 		status, err = getStatus()
 		if err != nil {
-			return cli.Exit(fmtGitErr(nil, err), 1)
+			return cli.Exit(err, 1)
 		}
 	}
 
@@ -305,12 +306,12 @@ func processCommits() error {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return cli.Exit(err.Error(), 1)
+		return cli.Exit(err, 1)
 	}
 
 	if err := cmd.Start(); err != nil {
 		fmt.Println(stdout)
-		return cli.Exit(fmtGitErr(cmd, err), 1)
+		return cli.Exit(err, 1)
 	}
 	reader := bufio.NewReader(stdout)
 
@@ -412,9 +413,11 @@ func getRefs() (map[string][]string, error) {
 	if err != nil {
 		return m, cli.Exit(err.Error(), 1)
 	}
+	var errBuf bytes.Buffer
+	cmd.Stderr = &errBuf
 
 	if err := cmd.Start(); err != nil {
-		return m, cli.Exit(fmtGitErr(cmd, err), 1)
+		return m, cli.Exit(err, 1)
 	}
 
 	reader := bufio.NewScanner(stdout)
@@ -427,8 +430,7 @@ func getRefs() (map[string][]string, error) {
 		m[split[0]] = append(m[split[0]], split[1])
 	}
 	if err := cmd.Wait(); err != nil {
-		println("weh")
-		return m, cli.Exit(fmtGitErr(cmd, err), 1)
+		return m, cli.Exit(errBuf.String(), 1)
 	}
 
 	/// TODO: the rest of the rebase stuff, but im lazy

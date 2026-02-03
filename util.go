@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -143,20 +142,6 @@ func tr(source string, from, to string) string {
 		}
 	}
 	return b.String()
-}
-
-// FIXME: its bbroken and doesnt print the actual error :]]]]]]]]]]
-func fmtGitErr(cmd *exec.Cmd, err error) string {
-	if cmd != nil && cmd.Stderr != nil {
-		return fmt.Sprintf("%s\n%s", cmd.Stderr, err)
-	}
-
-	ee, ok := err.(*exec.ExitError)
-	if ok {
-		return fmt.Sprintf("%s\n%s", ee.Stderr, ee.Error())
-	}
-
-	return "generic error: " + err.Error()
 }
 
 // STOLEN EVILLY from urfave/cli
