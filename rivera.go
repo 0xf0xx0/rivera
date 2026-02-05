@@ -153,7 +153,6 @@ func main() {
 				Name:    "hashlength",
 				Usage:   "`len`gth of the commit hash (min: 4)",
 				Aliases: []string{"hashlen", "l"},
-				Value:   8,
 			},
 			&cli.Uint8Flag{
 				Name:    "messagelength",
@@ -244,7 +243,20 @@ func main() {
 			config.displayStatus = ctx.Bool("status")
 			config.smoothOverpass = ctx.Bool("smooth-overpass")
 			config.style = int(ctx.Uint8("style"))
-			config.hashLen = int(min(max(4, ctx.Uint8("hashlength")), 40))
+
+			/// use the length of the short commit hash from git as the default length
+			/// this has the fun side effect of being the only thing alerting us to an empty repo!
+			cmd := exec.Command("git", "-C", config.repoPath,
+				"rev-parse", "--short", "HEAD")
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				return cli.Exit(strings.TrimSpace(string(output)), cmd.ProcessState.ExitCode())
+			}
+			config.hashLen = len(output)
+
+			if ctx.Uint8("hashlength") != 0 {
+				config.hashLen = int(min(max(4, ctx.Uint8("hashlength")), 40))
+			}
 			config.msgLen = int(ctx.Uint8("messagelength"))
 			config.leftMargin = int(ctx.Uint8("graphmarginleft"))
 			config.rightMargin = int(ctx.Uint8("graphmarginright"))
@@ -311,7 +323,7 @@ func processCommits() error {
 
 	if err := cmd.Start(); err != nil {
 		fmt.Println(stdout)
-		return cli.Exit(err, 1)
+		return cli.Exit(err, cmd.ProcessState.ExitCode())
 	}
 	reader := bufio.NewReader(stdout)
 
@@ -430,7 +442,7 @@ func getRefs() (map[string][]string, error) {
 		m[split[0]] = append(m[split[0]], split[1])
 	}
 	if err := cmd.Wait(); err != nil {
-		return m, cli.Exit(errBuf.String(), 1)
+		return m, cli.Exit(errBuf.String(), cmd.ProcessState.ExitCode())
 	}
 
 	/// TODO: the rest of the rebase stuff, but im lazy
