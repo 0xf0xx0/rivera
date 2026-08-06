@@ -386,7 +386,7 @@ func processCommits() error {
 		ret.WriteString("{/} ")
 		if len(message) > config.msgLen {
 			ret.WriteString(message[:config.msgLen])
-			ret.WriteString("...")
+			ret.WriteString("{blackbright}...")
 		} else {
 			ret.WriteString(message)
 		}
