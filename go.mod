@@ -1,11 +1,11 @@
 module git.0xf0xx0.eth.limo/0xf0xx0/git-rivera
 
-go 1.25
+go 1.25.0
 
 require (
 	git.0xf0xx0.eth.limo/0xf0xx0/oigiki v1.3.0
-	github.com/urfave/cli/v3 v3.6.1
-	golang.org/x/term v0.38.0
+	github.com/urfave/cli/v3 v3.10.1
+	golang.org/x/term v0.45.0
 )
 
-require golang.org/x/sys v0.39.0 // indirect
+require golang.org/x/sys v0.47.0 // indirect
