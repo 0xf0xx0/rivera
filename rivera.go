@@ -89,7 +89,8 @@ var (
 )
 
 var config = struct {
-	repoPath, userStyle                  string
+	start, end,
+	repoPath, userStyle string
 	hashLen, msgLen, style, subvineDepth int
 	leftMargin, rightMargin              int
 	reverse, smoothOverpass,
@@ -147,6 +148,14 @@ func main() {
 				Usage:   "repository `path` to use",
 				Aliases: []string{"repo"},
 				Value:   ".",
+			},
+			&cli.StringFlag{
+				Name:  "start",
+				Usage: "`commithash` to start at",
+			},
+			&cli.StringFlag{
+				Name:  "end",
+				Usage: "`commithash` to end at",
 			},
 			/// TODO: user-defined graph chars
 			&cli.Uint8Flag{
@@ -235,8 +244,9 @@ func main() {
 			}
 			/// yyyyyyoink
 			global_repoRoot = os.DirFS(repoRoot)
-
 			global_gitArgs = ctx.Args().Slice()
+			config.start = ctx.String("start")
+			config.end = ctx.String("end")
 			config.repoPath = repoRoot
 			config.displayAll = ctx.Bool("all")
 			config.reverse = !ctx.Bool("reverse")
@@ -245,7 +255,7 @@ func main() {
 			config.style = int(ctx.Uint8("style"))
 
 			/// use the length of the short commit hash from git as the default length
-			/// this has the fun side effect of being the only thing alerting us to an empty repo!
+			/// NOTE: this has the fun side effect of being the only thing alerting us to an empty repo!
 			cmd := exec.Command("git", "-C", config.repoPath,
 				"rev-parse", "--short", "HEAD")
 			output, err := cmd.CombinedOutput()
@@ -332,6 +342,12 @@ func processCommits() error {
 		/// we only collect lines when reversing
 		collectedLines = make([]string, 0, 128)
 	}
+	/// start by printing all lines; --start and --end flip this
+	printlines := true
+	/// if --start is passed, dont print any of the preceding lines
+	if config.start != "" {
+		printlines = false
+	}
 	for {
 		lines, err := getLineBlock(reader, config.subvineDepth)
 		if err != nil {
@@ -393,6 +409,17 @@ func processCommits() error {
 		ret.WriteRune('\n')
 
 		ret.WriteString(vineMerge(&vine, sha, nextShas, parents))
+
+		/// print toggling
+		if config.start != "" && strings.HasPrefix(sha, config.start) {
+			printlines = true
+		} else
+		/// yes we discard all the work done
+		if !printlines {
+			continue
+		} else if config.end != "" && strings.HasPrefix(sha, config.end) {
+			printlines = false
+		}
 
 		if config.reverse {
 			/// split each line for proper reversal (theyre printed in clumps)
