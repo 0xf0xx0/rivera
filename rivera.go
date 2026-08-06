@@ -934,12 +934,12 @@ func visXfrm(line string) string {
 		}
 	/// idk why the perl used 10 and 15, like ???
 	/// double
-	case 3:
+	case 10, 3:
 		{
 			line = tr(line, styleReplace, "╠╣══.╔╦╗.║╬─.╚╩╝.╓║║╙")
 		}
 	/// curves
-	case 4:
+	case 15, 4:
 		{
 			line = tr(line, styleReplace, "├┤──.╭┬╮.│┼─.╰┴╯.┬├├┴")
 		}
@@ -957,6 +957,7 @@ func visXfrm(line string) string {
 
 	/// finally, actually color the string using the hints
 	sb := strings.Builder{}
+	sb.Grow(len(line))
 	for idx, c := range []rune(line) {
 		if colorHints[idx] != "" {
 			sb.WriteString("{")
@@ -979,7 +980,7 @@ func clearColorHintsUnderMatch(idx int, match string, colorHints *[]string) {
 	}
 }
 
-// reducing repetition, just ensures offset is %2 before halving
+// ensures offset is a multiple of 2 before halving
 func offsetHelper(offset int) int {
 	if offset%2 == 1 {
 		offset++
@@ -990,11 +991,13 @@ func offsetHelper(offset int) int {
 	return offset
 }
 
+// TODO: inline
 func visPost(line string) string {
 	return visXfrm(cleanLine(strings.TrimSpace(line)))
 }
 
 // TODO: use the furst color only for the main trunk
 func getBranchColor(n int) string {
+	/// TODO: cache len
 	return global_branchColors[n%len(global_branchColors)]
 }
