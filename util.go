@@ -119,9 +119,8 @@ func recursivelyLookForGitRoot(path string, maxDepth uint) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	path = filepath.Clean(path)
 	potentialRoot := filepath.Join(path, "./.git")
-	/// [1:] because fs.root doesnt treat base / as root
+	/// NOTE: [1:] because fs.root doesnt treat base / as root
 	if fileExists(potentialRoot[1:]) {
 		return path, nil
 	}
@@ -131,9 +130,9 @@ func recursivelyLookForGitRoot(path string, maxDepth uint) (string, error) {
 }
 
 // useful func generated while throwing perl at gpt-oss
-func tr(source string, from, to string) string {
+func tr(source, from, to string) string {
 	var b strings.Builder
-	for _, r := range source {
+	for _, r := range []rune(source) {
 		idx := strings.IndexRune(from, r)
 		if idx >= 0 {
 			b.WriteRune([]rune(to)[idx])
