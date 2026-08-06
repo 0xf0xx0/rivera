@@ -45,6 +45,8 @@ git-rivera
 
 ```
     --repository path, --repo path          repository path to use (default: ".")
+    --start commithash                      commithash to start at
+    --end commithash                        commithash to end at
     --hashlength len, --hashlen len, -l len length of the commit hash (min: 4) (default: 8)
     --messagelength len, --msglen len       length of the commit message (default: 50)
     --style num, -s num                     style num to select (1-5) (default: 1)
