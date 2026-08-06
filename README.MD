@@ -9,7 +9,8 @@
 - the graph is reversed by default, with the root at the top and tip(s) at the bottom
 - persistent branch coloring
 - `--repository` option to pass a path (no more needing to `cd` beforepaw)
-- more control over overpasses (no more ODODO -> OOOOO) (TODO: example image)
+- more control over overpasses (no more ODODO -> OOOOO)
+  ex: overpass becomes `======` instead of `=-=-=-`
 - accepts git args (`git-rivera --rivera-arg -- --git-arg, --git-arg-2`)
 
 ## install
@@ -64,6 +65,27 @@ git-rivera
     --color                                 force color output
     --nocolor, --stdout                     disable color output
 ```
+
+## custom graph chars `--customstyle`
+
+- `A`: branch to right
+- `B`: branch to left
+- `C`: commit
+- `M`: merge commit
+- `D`: overpass over empty space
+- `e`: merge visual left (╔)
+- `f`: merge visual center (╦)
+- `g`: merge visual right (╗)
+- `I`: straight line (║)
+- `K`: branch visual split (╬)
+- `m`: single line (─)
+- `O`: overpass (≡)
+- `r`: root (╙)
+- `t`: tip (╓)
+- `x`: branch visual left (╚)
+- `y`: branch visual center (╩)
+- `z`: branch visual right (╝)
+- `*`: filler
 
 ## todo
 

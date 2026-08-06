@@ -157,7 +157,6 @@ func main() {
 				Name:  "end",
 				Usage: "`commithash` to end at",
 			},
-			/// TODO: user-defined graph chars
 			&cli.Uint8Flag{
 				Name:    "hashlength",
 				Usage:   "`len`gth of the commit hash (min: 4)",
@@ -174,6 +173,10 @@ func main() {
 				Usage:   "style `num` to select (1-5)",
 				Aliases: []string{"s"},
 				Value:   1,
+			},
+			&cli.StringFlag{
+				Name:  "userstyle",
+				Usage: "graph `chars` to use for the commit graph (format: ABDO.efg.IKm.xyz.tCMr)",
 			},
 			&cli.Uint8Flag{
 				Name:    "subvinedepth",
@@ -253,6 +256,7 @@ func main() {
 			config.displayStatus = ctx.Bool("status")
 			config.smoothOverpass = ctx.Bool("smooth-overpass")
 			config.style = int(ctx.Uint8("style"))
+			config.userStyle = ctx.String("userstyle")
 
 			/// use the length of the short commit hash from git as the default length
 			/// NOTE: this has the fun side effect of being the only thing alerting us to an empty repo!
@@ -945,41 +949,42 @@ func visXfrm(line string) string {
 	}
 
 	/// now replace with graph chars
-	switch config.style {
-	/// no replace
-	case 0:
-		break
-	/// thin
-	case 1:
-		{
-			line = tr(line, styleReplace, "├┤──.┌┬┐.│┼─.└┴┘.┬├├┴")
-		}
-	/// thin with double bridge
-	case 2:
-		{
-			line = tr(line, styleReplace, "╞╡═╪.╒╤╕.│┼─.╘╧╛.┬├├┴")
-		}
-	/// idk why the perl used 10 and 15, like ???
-	/// double
-	case 10, 3:
-		{
-			line = tr(line, styleReplace, "╠╣══.╔╦╗.║╬─.╚╩╝.╓║║╙")
-		}
-	/// curves
-	case 15, 4:
-		{
-			line = tr(line, styleReplace, "├┤──.╭┬╮.│┼─.╰┴╯.┬├├┴")
-		}
-	/// thicc
-	case 5:
-		{
-			line = tr(line, styleReplace, "┣┫━━.┏┳┓.┃╋━.┗┻┛.┳┣┣┻")
-		}
-	}
-
 	/// TODO: finish implementing
 	if config.userStyle != "" {
 		line = tr(line, styleReplace, config.userStyle)
+	} else {
+		switch config.style {
+		/// no replace
+		case 0:
+			break
+		/// thin
+		case 1:
+			{
+				line = tr(line, styleReplace, "├┤──.┌┬┐.│┼─.└┴┘.┬├├┴")
+			}
+		/// thin with double bridge
+		case 2:
+			{
+				line = tr(line, styleReplace, "╞╡═╪.╒╤╕.│┼─.╘╧╛.┬├├┴")
+			}
+		/// idk why the perl used 10 and 15, like ???
+		/// double
+		case 10, 3:
+			{
+				line = tr(line, styleReplace, "╠╣══.╔╦╗.║╬─.╚╩╝.╓║║╙")
+			}
+			line = tr(line, styleReplace, "╠╣══.╔╦╗.║╬─.╚╩╝.╓║║╙")
+		/// curves
+		case 15, 4:
+			{
+				line = tr(line, styleReplace, "├┤──.╭┬╮.│┼─.╰┴╯.┬├├┴")
+			}
+		/// thicc
+		case 5:
+			{
+				line = tr(line, styleReplace, "┣┫━━.┏┳┓.┃╋━.┗┻┛.┳┣┣┻")
+			}
+		}
 	}
 
 	/// finally, actually color the string using the hints
