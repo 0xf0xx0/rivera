@@ -298,7 +298,7 @@ func main() {
 
 func processCommits() error {
 	/// NOTE: getLineBlock inches the slice along, ensure the backing array has enough capacity
-	/// the buffer stores the next commits to look at and is filled by getLineBlock
+	/// the buffer stores the next commits to look at and is filled/grown by getLineBlock
 	global_commitBuffer = make([]string, 0, config.subvineDepth*32)
 	/// each vine is a git branch
 	vine := make([]string, 0, config.subvineDepth)
@@ -341,10 +341,10 @@ func processCommits() error {
 	}
 	reader := bufio.NewReader(stdout)
 
-	collectedLines := []string{}
+	var collectedLines []string
 	if config.reverse {
 		/// we only collect lines when reversing
-		collectedLines = make([]string, 0, 128)
+		collectedLines = make([]string, 0, config.subvineDepth*32)
 	}
 	/// start by printing all lines; --start and --end flip this
 	printlines := true
@@ -395,6 +395,7 @@ func processCommits() error {
 
 		ret.WriteString(fmt.Sprintf("%s{yellow}%s",
 			strings.Repeat(" ", config.rightMargin), author))
+		/// avoid expensive string lookups
 		if _, ok := refMap[sha]; ok {
 			/// only print the status on the local HEAD
 			if strings.Index(autoRefs, "/HEAD") == -1 {
@@ -809,6 +810,27 @@ func visFan3(l, r string) string {
 	return sb.String()
 }
 
+func clearColorHintsUnderMatch(idx int, match string, colorHints *[]string) {
+	for i := idx; i < idx+len(match); i++ {
+		if i == 0 {
+			/// leave the default color
+			continue
+		}
+		(*colorHints)[i] = ""
+	}
+}
+
+// ensures offset is a multiple of 2 before halving
+func offsetHelper(offset int) int {
+	if offset%2 == 1 {
+		offset++
+	}
+	if offset > 0 {
+		offset /= 2
+	}
+	return offset
+}
+
 // this func is kinda dumb and needs a refactor
 //
 // basically it matches various patterns and notes down colors for them
@@ -819,34 +841,15 @@ func visFan3(l, r string) string {
 //
 // then, the patterns are matched and the colors are updated and written before being turned into
 // graph chars and returned
-func visXfrm(line string) string {
-	/* NOTE: from original perl:
-		# A: branch to right
-		# B: branch to left
-		# C: commit
-		# M: merge commit
-		# D: overpass over empty space
-		# e: merge visual left (╔)
-		# f: merge visual center (╦)
-		# g: merge visual right (╗)
-		# I: straight line (║)
-		# K: branch visual split (╬)
-	    # m: single line (─)
-		# O: overpass (≡)
-		# r: root (╙)
-		# t: tip (╓)
-		# x: branch visual left (╚)
-		# y: branch visual center (╩)
-		# z: branch visual right (╝)
-		# *: filler
-	*/
+func visPost(line string) string {
+	/// cleanup
+	line = cleanLine(strings.TrimSpace(line))
 	if config.reverse {
 		line = tr(line, "efg.xyz.tr", "xyz.efg.rt")
 	}
 
+	/// initial branch colors
 	colorHints := make([]string, len(line))
-
-	/// set the initial branch colors
 	for idx := range line {
 		if idx%2 == 0 {
 			colorHints[idx] = getBranchColor(idx / 2)
@@ -998,34 +1001,7 @@ func visXfrm(line string) string {
 		}
 		sb.WriteRune(c)
 	}
-
 	return sb.String()
-}
-
-func clearColorHintsUnderMatch(idx int, match string, colorHints *[]string) {
-	for i := idx; i < idx+len(match); i++ {
-		if i == 0 {
-			/// leave the default color
-			continue
-		}
-		(*colorHints)[i] = ""
-	}
-}
-
-// ensures offset is a multiple of 2 before halving
-func offsetHelper(offset int) int {
-	if offset%2 == 1 {
-		offset++
-	}
-	if offset > 0 {
-		offset /= 2
-	}
-	return offset
-}
-
-// TODO: inline
-func visPost(line string) string {
-	return visXfrm(cleanLine(strings.TrimSpace(line)))
 }
 
 // TODO: use the furst color only for the main trunk
