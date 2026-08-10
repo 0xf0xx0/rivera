@@ -190,7 +190,7 @@ func main() {
 			},
 			&cli.Uint8Flag{
 				Name:    "subvinedepth",
-				Usage:   "internal lookahead depth for branches, not sure what this does exactly",
+				Usage:   "internal lookahead depth for branches, slightly modifies graph | seems like 1-10 is the range, anything further increases processing time for no visual difference",
 				Aliases: []string{"svdepth"},
 				Value:   2,
 			},
