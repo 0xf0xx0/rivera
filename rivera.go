@@ -83,7 +83,7 @@ var (
 	leftcii = regexp.MustCompile(`(C|I)II`)
 	leftxB  = regexp.MustCompile(`(x\w*B)`)
 	leftAg  = regexp.MustCompile(`A(\w*g)`)
-	righteB = regexp.MustCompile(`e(\w*B)`)
+	righteB = regexp.MustCompile(`(e\w*B)`)
 	rightzI = regexp.MustCompile(`z(\w*I)`)
 	rightAz = regexp.MustCompile(`(A\w*z)`)
 )
@@ -915,7 +915,7 @@ func visPost(line string) string {
 
 	/// offset is the index into the vines array,
 	/// idx is the actual printed index
-	// test := ""
+	// test := testColorLogHelper(0, line, "")
 	if config.reverse {
 		if matches := leftxB.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
@@ -936,8 +936,6 @@ func visPost(line string) string {
 
 			/// the last column is the destination, set the color accordingly
 			colorHints[endIdx] = getBranchColor(offsetHelper(endIdx))
-
-			// test = testColorLogHelper(idx, line, matches[1])
 		} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
 			offset := offsetHelper(idx)
@@ -973,9 +971,17 @@ func visPost(line string) string {
 			offset := offsetHelper(idx)
 			colorHints[idx] = getBranchColor(offset)
 		} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
-			offset := offsetHelper(strings.Index(line, matches[1]))
-			clearColorHintsUnderMatch(offset, matches[1], &colorHints)
-			colorHints[offset] = getBranchColor(offset - 1)
+			idx := strings.Index(line, matches[1])
+			offset := offsetHelper(idx)
+			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
+
+			if idx%2 == 0 {
+				colorHints[idx] = getBranchColor(offset)
+			} else {
+				colorHints[idx] = getBranchColor(offsetHelper(idx - 1))
+			}
+
+			// test = testColorLogHelper(idx, line, matches[1])
 		} else if matches := rightzI.FindStringSubmatch(line); len(matches) > 0 {
 			offset := offsetHelper(strings.Index(line, matches[1]))
 			colorHints[offset] = getBranchColor(offset)
@@ -1056,11 +1062,11 @@ func visPost(line string) string {
 
 // for logging pls ignor
 func testColorLogHelper(idx int, line string, match string) string {
-	testPad := fmt.Sprintf("{blackbright}%s %s%s",
+	testPad := fmt.Sprintf("%s %s%s",
 		strings.Repeat(" ", config.hashLen), strings.Repeat(" ", len(DATE_FMT)), strings.Repeat(" ", config.leftMargin),
 	)
-	theSlab := fmt.Sprintf("%d %d]", idx, offsetHelper(idx))
-	theSlab = fmt.Sprintf("\n%s%s%s (%s)\n", theSlab, testPad[:len(testPad)-(len(theSlab))], line, match)
+	theSlab := fmt.Sprintf("i: %d o: %d]", idx, offsetHelper(idx))
+	theSlab = fmt.Sprintf("\n{/}{blackbright}%s%s%s (%s)\n", theSlab, testPad[:len(testPad)-(len(theSlab))], line, match)
 	/// you didnt ignore D: king ramses curse upon ye
 	return theSlab
 }
