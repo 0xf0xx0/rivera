@@ -80,10 +80,14 @@ var (
 	fanMR         = regexp.MustCompile(`S(.*s)`)
 	/// fmt pt 2
 	leftcii = regexp.MustCompile(`(C|I)II`)
-	leftxB  = regexp.MustCompile(`(x\w*B)`)
-	leftAg  = regexp.MustCompile(`A(\w*g)`)
+
+	leftxB = regexp.MustCompile(`(x\w*B)`)
+	leftxz = regexp.MustCompile(`(x\w*z)`)
+	leftAg = regexp.MustCompile(`A(\w*g)`)
+
 	righteB = regexp.MustCompile(`(e\w*)B`)
-	rightzI = regexp.MustCompile(`z(\w*I)`)
+	righteg = regexp.MustCompile(`(e\w*)g`)
+	rightzI = regexp.MustCompile(`z(\w*I)`) /// TODO: needed?
 	rightAz = regexp.MustCompile(`(A\w*z)`)
 )
 
@@ -941,7 +945,13 @@ func visPost(line string) string {
 		} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
 			offset := offsetHelper(idx)
-			colorHints[idx-1] = getBranchColor(offset)
+			colorHints[idx] = getBranchColor(offset)
+		} else if matches := righteg.FindStringSubmatch(line); len(matches) > 0 {
+			idx := strings.Index(line, matches[1])
+			endIdx := idx + len(matches[1]) - 1
+			offset := offsetHelper(endIdx)
+			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
+			colorHints[idx] = getBranchColor(offset)
 		} else if matches := rightzI.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
 			offset := offsetHelper(idx)
@@ -961,8 +971,10 @@ func visPost(line string) string {
 			endIdx := idx + len(matches[1]) - 1
 			offset := offsetHelper(idx)
 			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
-			/// color the merge overpass (minus the ending "A")
-			colorHints[idx+1] = getBranchColor(offsetHelper(endIdx))
+			/// color the merge overpass (minus the ending "A"), but only if it connects to another vine
+			if endIdx%2 == 0 {
+				colorHints[idx+1] = getBranchColor(offsetHelper(endIdx))
+			}
 			/// color the "A"
 			colorHints[idx] = getBranchColor(offset)
 		}
