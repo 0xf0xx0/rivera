@@ -24,13 +24,13 @@ func makeGitCommand(gitCmdArgs ...string) *exec.Cmd {
 	cmd := exec.Command("git", args...)
 	return cmd
 }
-func readOutput(gitCmd *exec.Cmd) (string, error) {
+func readOutput(gitCmd *exec.Cmd) (string, cli.ExitCoder) {
 	output, err := gitCmd.CombinedOutput()
+	outputStr := strings.TrimSpace(string(output))
 	if err != nil {
-		println(err.Error(), config.repoPath)
-		return "", err
+		return "", cli.Exit(outputStr, gitCmd.ProcessState.ExitCode())
 	}
-	return string(output), nil
+	return outputStr, nil
 }
 
 /// git-log parsing utils

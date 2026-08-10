@@ -282,9 +282,12 @@ func main() {
 			/// use the length of the short commit hash from git as the default length
 			/// NOTE: this has the fun side effect of being the only thing alerting us to an empty repo!
 			cmd := makeGitCommand("rev-parse", "--short", "HEAD")
-			output, err := cmd.CombinedOutput()
+			output, err := readOutput(cmd)
 			if err != nil {
-				return cli.Exit(strings.TrimSpace(string(output)), cmd.ProcessState.ExitCode())
+				if err.Error() == "fatal: Needed a single revision" {
+					return cli.Exit("no commits, is the repo empty?", err.(cli.ExitCoder).ExitCode())
+				}
+				return err
 			}
 			config.hashLen = len(output)
 
