@@ -270,7 +270,7 @@ func main() {
 			config.msgLen = int(ctx.Uint8("messagelength"))
 			config.leftMargin = int(ctx.Uint8("graphmarginleft"))
 			config.rightMargin = int(ctx.Uint8("graphmarginright"))
-			config.subvineDepth = int(ctx.Uint8("svdepth"))
+			config.subvineDepth = max(1, int(ctx.Uint8("svdepth")))
 			global_branchColors = strings.Split(ctx.String("branchcolors"), ",")
 			for idx, color := range global_branchColors {
 				color = strings.TrimSpace(cleanLine(color))
