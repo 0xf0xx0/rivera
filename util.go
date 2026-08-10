@@ -99,7 +99,8 @@ func splitMessage(msg string) (hash string, timestamp time.Time, author, refs st
 
 /// coloring utils
 
-// used in visPost, this clears the colors along a line for proper vine and sub-vine coloring
+// used in visPost, this clears the colors along a line from idx to idx+len(match) for proper vine and sub-vine coloring
+// TODO: match -> endIdx?
 func clearColorHintsUnderMatch(idx int, match string, colorHints *[]string) {
 	for i := idx; i < idx+len(match); i++ {
 		if i == 0 {
