@@ -82,7 +82,6 @@ var (
 	/// fmt pt 2
 	leftcii = regexp.MustCompile(`(C|I)II`)
 	leftxB  = regexp.MustCompile(`(x\w*B)`)
-	leftgI  = regexp.MustCompile(`(g\w*I)`)
 	leftAg  = regexp.MustCompile(`A(\w*g)`)
 	righteB = regexp.MustCompile(`e(\w*B)`)
 	rightzI = regexp.MustCompile(`z(\w*I)`)
@@ -904,6 +903,7 @@ func visPost(line string) string {
 	}
 
 	/// color branches and overpasses based on source
+
 	/// NOTE: edge case: padding that ends up between vines adopts the wrong color
 	/// patterns: CII? IIC? II<spc>/<spc>II?
 	if matches := leftcii.FindStringSubmatch(line); len(matches) > 0 {
@@ -915,7 +915,7 @@ func visPost(line string) string {
 
 	/// offset is the index into the vines array,
 	/// idx is the actual printed index
-	test := ""
+	// test := ""
 	if config.reverse {
 		if matches := leftxB.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
@@ -937,11 +937,7 @@ func visPost(line string) string {
 			/// the last column is the destination, set the color accordingly
 			colorHints[endIdx] = getBranchColor(offsetHelper(endIdx))
 
-			// test = fmt.Sprintf("\r%d %d]\t\t\t    %s (%s)\n", idx, offset, line, matches[1])
-		} else if matches := leftgI.FindStringSubmatch(line); len(matches) > 0 {
-			idx := strings.Index(line, matches[1])
-			offset := offsetHelper(idx)
-			colorHints[idx] = getBranchColor(offset)
+			// test = testColorLogHelper(idx, line, matches[1])
 		} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
 			offset := offsetHelper(idx)
@@ -960,14 +956,14 @@ func visPost(line string) string {
 			offset := offsetHelper(idx)
 			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
 			colorHints[idx] = getBranchColor(offset - 1)
-			// colorHints[idx+len(matches[1])-1] = getBranchColor(offsetHelper(idx + len(matches[1]) - 1))
 		} else if matches := rightAz.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
+			endIdx := idx + len(matches[1]) - 1
 			offset := offsetHelper(idx)
 			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
-			/// color the section (minus the A)
-			colorHints[idx+1] = getBranchColor((idx + len(matches[1])) / 2)
-			// /// color the "A"
+			/// color the merge overpass (minus the ending "A")
+			colorHints[idx+1] = getBranchColor(offsetHelper(endIdx))
+			/// color the "A"
 			colorHints[idx] = getBranchColor(offset)
 		}
 	} else {
@@ -976,9 +972,6 @@ func visPost(line string) string {
 			idx := strings.Index(line, matches[1])
 			offset := offsetHelper(idx)
 			colorHints[idx] = getBranchColor(offset)
-		} else if matches := leftgI.FindStringSubmatch(line); len(matches) > 0 {
-			offset := offsetHelper(strings.Index(line, matches[1]))
-			colorHints[offset] = getBranchColor(offset)
 		} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
 			offset := offsetHelper(strings.Index(line, matches[1]))
 			clearColorHintsUnderMatch(offset, matches[1], &colorHints)
@@ -1049,7 +1042,6 @@ func visPost(line string) string {
 	/// finally, actually color the string using the hints
 	sb := strings.Builder{}
 	sb.Grow(len(line))
-	sb.WriteString(test)
 	for idx, c := range []rune(line) {
 		if colorHints[idx] != "" {
 			sb.WriteString("{")
@@ -1058,5 +1050,17 @@ func visPost(line string) string {
 		}
 		sb.WriteRune(c)
 	}
+	// sb.WriteString(test)
 	return sb.String()
+}
+
+// for logging pls ignor
+func testColorLogHelper(idx int, line string, match string) string {
+	testPad := fmt.Sprintf("{blackbright}%s %s%s",
+		strings.Repeat(" ", config.hashLen), strings.Repeat(" ", len(DATE_FMT)), strings.Repeat(" ", config.leftMargin),
+	)
+	theSlab := fmt.Sprintf("%d %d]", idx, offsetHelper(idx))
+	theSlab = fmt.Sprintf("\n%s%s%s (%s)\n", theSlab, testPad[:len(testPad)-(len(theSlab))], line, match)
+	/// you didnt ignore D: king ramses curse upon ye
+	return theSlab
 }
