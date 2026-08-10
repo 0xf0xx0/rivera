@@ -296,6 +296,7 @@ func main() {
 	}
 }
 
+// commits are processed from tip to root
 func processCommits() error {
 	/// NOTE: getLineBlock inches the slice along, ensure the backing array has enough capacity
 	/// the buffer stores the next commits to look at and is filled/grown by getLineBlock
@@ -385,16 +386,22 @@ func processCommits() error {
 
 		ret := strings.Builder{}
 		ret.Grow(256)
+
+		/// draw the branches leading to the commit
 		ret.WriteString(vineBranch(&vine, sha))
 
+		/// print hash, date, and leftpad
 		ret.WriteString(fmt.Sprintf("{magenta}%s {blue}%s%s",
 			sha[:config.hashLen], t.Format(DATE_FMT), strings.Repeat(" ", config.leftMargin),
 		))
 
+		/// print the commit
 		ret.WriteString(vineCommit(&vine, sha, parents))
 
+		/// rightpad, author
 		ret.WriteString(fmt.Sprintf("%s{yellow}%s",
 			strings.Repeat(" ", config.rightMargin), author))
+
 		/// avoid expensive string lookups
 		if _, ok := refMap[sha]; ok {
 			/// only print the status on the local HEAD
@@ -405,22 +412,23 @@ func processCommits() error {
 		}
 		ret.WriteString(autoRefs)
 		ret.WriteString("{/} ")
-		if len(message) > config.msgLen {
+
+		/// truncate message if too long, but only if adding ellipses would be shorter
+		if len(message) > config.msgLen+3 {
 			ret.WriteString(string(message[:config.msgLen]))
 			ret.WriteString("{blackbright}...")
 		} else {
-			ret.WriteString(message)
+			ret.WriteString(string(message))
 		}
 		ret.WriteRune('\n')
 
+		/// draw merges after
 		ret.WriteString(vineMerge(&vine, sha, nextShas, parents))
 
-		/// print toggling
+		/// toggle printing
 		if config.start != "" && strings.HasPrefix(sha, config.start) {
 			printlines = true
-		} else
-		/// yes we discard all the work done
-		if !printlines {
+		} else if !printlines {
 			continue
 		} else if config.end != "" && strings.HasPrefix(sha, config.end) {
 			printlines = false
@@ -816,7 +824,7 @@ func visFan3(l, r string) string {
 //
 // furst, every column is given a color based on its index
 //
-// then, the patterns are matched and the colors are updated and written before being turned into
+// then, branch patterns are matched and the colors are updated and written before being turned into
 // graph chars and returned
 func visPost(line string) string {
 	/// cleanup
