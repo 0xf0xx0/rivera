@@ -83,7 +83,7 @@ var (
 	leftcii = regexp.MustCompile(`(C|I)II`)
 	leftxB  = regexp.MustCompile(`(x\w*B)`)
 	leftAg  = regexp.MustCompile(`A(\w*g)`)
-	righteB = regexp.MustCompile(`(e\w*B)`)
+	righteB = regexp.MustCompile(`(e\w*)B`)
 	rightzI = regexp.MustCompile(`z(\w*I)`)
 	rightAz = regexp.MustCompile(`(A\w*z)`)
 )
@@ -983,19 +983,19 @@ func visPost(line string) string {
 
 			// test = testColorLogHelper(idx, line, matches[1])
 		} else if matches := rightzI.FindStringSubmatch(line); len(matches) > 0 {
-			offset := offsetHelper(strings.Index(line, matches[1]))
-			colorHints[offset] = getBranchColor(offset)
+			idx := strings.Index(line, matches[1])
+			offset := offsetHelper(idx)
+			colorHints[idx] = getBranchColor(offset)
 		}
 
 		if matches := leftAg.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
+			endIdx := idx + len(matches[1]) - 1
 			offset := offsetHelper(idx - 1)
 
 			/// we take the index of `g` to get the correct color
-			overpassIdx := idx + len(matches[1])
 			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
-			colorHints[idx] = getBranchColor(overpassIdx / 2)
-			colorHints[idx] = getBranchColor(offsetHelper(overpassIdx - 1))
+			colorHints[idx] = getBranchColor(offsetHelper(endIdx))
 			colorHints[idx-1] = getBranchColor(offset)
 		} else if matches := rightAz.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
