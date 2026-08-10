@@ -63,7 +63,7 @@ func parseLine(line string) (sha, miniSha, message string, parents []string) {
 	message = matches[3]
 	return
 }
-func splitMessage(msg string) (hash string, timestamp time.Time, author, refs, message string) {
+func splitMessage(msg string) (hash string, timestamp time.Time, author, refs string, message []rune) {
 	split := strings.Split(msg, "\t")
 	if len(split) == 0 {
 		return
@@ -72,9 +72,10 @@ func splitMessage(msg string) (hash string, timestamp time.Time, author, refs, m
 	// TODO: error
 	t, _ := strconv.Atoi(split[1])
 	timestamp = time.Unix(int64(t), 0)
+	/// these can contain unicode, and message in particular can be truncated
 	author = split[2]
 	refs = split[3]
-	message = split[4]
+	message = []rune(split[4])
 	return
 }
 
@@ -111,8 +112,6 @@ func strExpand(s *string, l int) {
 		(*s) += strings.Repeat(" ", x)
 	}
 }
-
-// TODO: r should be rune
 func replaceAt(s *string, r string, n int) {
 	split := strings.Split(*s, "")
 	split[n] = r
