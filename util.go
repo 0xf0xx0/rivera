@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -14,6 +15,22 @@ import (
 	"git.0xf0xx0.eth.limo/0xf0xx0/oigiki"
 	"github.com/urfave/cli/v3"
 )
+
+/// git utils
+
+func makeGitCommand(gitCmdArgs ...string) *exec.Cmd {
+	args := []string{"-C", config.repoPath}
+	args = append(args, gitCmdArgs...)
+	cmd := exec.Command("git", args...)
+	return cmd
+}
+func readOutput(gitCmd *exec.Cmd) (string, error) {
+	output, err := gitCmd.Output()
+	if err != nil {
+		return "", err
+	}
+	return string(output), nil
+}
 
 /// git-log parsing utils
 
@@ -144,6 +161,13 @@ func fileExists(path string) bool {
 	_, err := fs.Stat(global_root, path)
 	return err == nil
 }
+func readFileInRepo(path string) (string, error) {
+	b, err := fs.ReadFile(global_repoRoot, path)
+	if err != nil {
+		return "", err
+	}
+	return string(b), nil
+}
 func recursivelyLookForGitRoot(path string, maxDepth uint) (string, error) {
 	if maxDepth == 0 {
 		return "", errors.New("ran out of depth looking for git root; is this actually a git repository?")
@@ -167,6 +191,17 @@ func recursivelyLookForGitRoot(path string, maxDepth uint) (string, error) {
 }
 
 /// misc utils
+
+func appendToMapArray(m map[string][]string, key, value string) bool {
+	if m == nil {
+		return false
+	}
+	if _, ok := m[key]; !ok {
+		m[key] = make([]string, 0, 3)
+	}
+	m[key] = append(m[key], value)
+	return true
+}
 
 func cleanLine(l string) string {
 	return strings.Trim(l, "\r\n\t")

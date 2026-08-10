@@ -32,6 +32,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"log"
@@ -68,8 +69,11 @@ Version:
 
 // regex
 var (
-	lineRegex    = regexp.MustCompile(`^<(.*?)><(.*?)><(.*?)>(.*)`)
-	nextShaRegex = regexp.MustCompile(`^<(.*?)>`)
+	lineRegex          = regexp.MustCompile(`^<(.*?)><(.*?)><(.*?)>(.*)`)
+	nextShaRegex       = regexp.MustCompile(`^<(.*?)>`)
+	rebaseRefRegex     = regexp.MustCompile(`^\S+\s+(\S+)`)
+	rebaseCommentRegex = regexp.MustCompile(`^\s*#`)
+
 	/// fmt pt 1
 	overpassRegex = regexp.MustCompile(`O[DO]+O`)
 	fanRegex      = regexp.MustCompile(`(?i)s.*s`)
@@ -115,7 +119,8 @@ var buildCommit = func() string {
 }()
 
 func main() {
-	/// discard sigpipe
+	/// NOTE: discard sigpipe
+	/// otherwise go vomits a pointless error
 	go func() {
 		c := make(chan os.Signal, 1)
 		signal.Notify(c, syscall.SIGPIPE)
@@ -464,9 +469,10 @@ func processCommits() error {
 	return nil
 }
 
+// creates a map of reference hashes to names
 func getRefs() (map[string][]string, error) {
 	m := make(map[string][]string, 32)
-	cmd := exec.Command("git", "-C", config.repoPath, "show-ref")
+	cmd := makeGitCommand("show-ref")
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		return m, cli.Exit(err.Error(), 1)
@@ -482,18 +488,64 @@ func getRefs() (map[string][]string, error) {
 	for reader.Scan() {
 		line := reader.Text()
 		split := strings.Split(line, " ")
-		if _, ok := m[split[0]]; !ok {
-			m[split[0]] = make([]string, 0, 3)
-		}
-		m[split[0]] = append(m[split[0]], split[1])
+		commit := split[0]
+		refName := split[1]
+		appendToMapArray(m, commit, refName)
 	}
 	if err := cmd.Wait(); err != nil {
 		return m, cli.Exit(errBuf.String(), cmd.ProcessState.ExitCode())
 	}
 
-	/// TODO: the rest of the rebase stuff, but im lazy
+	if fileExistsInRepo("/rebase-merge/git-rebase-todo") {
+		rebase, err := readFileInRepo("/rebase-merge/git-rebase-todo")
+		if err != nil {
+			return nil, err
+		}
+		split := strings.Split(rebase, "\n")
+		curr := ""
+		matches := rebaseRefRegex.FindStringSubmatch(rebase)
+		if len(matches) == 0 {
+			return nil, errors.New("rebase reference leads to nowhere")
+		}
+		curr = matches[1]
+		for _, line := range split {
+			if rebaseCommentRegex.MatchString(line) {
+				continue
+			}
+
+			matches := rebaseRefRegex.FindStringSubmatch(line)
+			if len(matches) == 1 {
+				curr = matches[1]
+				break
+			}
+		}
+
+		if curr != "" {
+			/// resolve the ref to a commit hash
+			cmd := makeGitCommand("rev-parse", curr)
+			curr, err := readOutput(cmd)
+			if err != nil {
+				return nil, err
+			}
+			curr = strings.TrimSpace(curr)
+
+			appendToMapArray(m, curr, "rebase/next")
+		}
+
+		todoCmd := makeGitCommand("rev-parse", "rebase-merge/onto")
+		if output, err := readOutput(todoCmd); err == nil {
+			appendToMapArray(m, output, "rebase/onto")
+		}
+
+		head, err := readOutput(makeGitCommand("rev-parse", "HEAD"))
+		if err != nil {
+			return nil, err
+		}
+		appendToMapArray(m, head, "rebase/head")
+	}
 	return m, nil
 }
+
 func getStatus() (string, error) {
 	dirty := ""
 	midFlow := ""
