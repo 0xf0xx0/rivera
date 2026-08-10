@@ -27,6 +27,7 @@ func makeGitCommand(gitCmdArgs ...string) *exec.Cmd {
 func readOutput(gitCmd *exec.Cmd) (string, error) {
 	output, err := gitCmd.Output()
 	if err != nil {
+		println(err.Error(), config.repoPath)
 		return "", err
 	}
 	return string(output), nil
@@ -154,7 +155,7 @@ func offsetHelper(offset int) int {
 /// fs utils
 
 func fileExistsInRepo(path string) bool {
-	_, err := fs.Stat(global_repoRoot, path)
+	_, err := fs.Stat(global_repoRoot, filepath.Join(".git", path))
 	return err == nil
 }
 func fileExists(path string) bool {
@@ -162,7 +163,7 @@ func fileExists(path string) bool {
 	return err == nil
 }
 func readFileInRepo(path string) (string, error) {
-	b, err := fs.ReadFile(global_repoRoot, path)
+	b, err := fs.ReadFile(global_repoRoot, filepath.Join(".git", path))
 	if err != nil {
 		return "", err
 	}

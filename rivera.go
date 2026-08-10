@@ -416,7 +416,8 @@ func processCommits() error {
 		/// avoid expensive string lookups
 		if _, ok := refMap[sha]; ok {
 			/// only print the status on the local HEAD
-			if strings.Index(autoRefs, "/HEAD") == -1 {
+			/// TODO: idx != -1 OR (idx > 0 AND autoRefs[idx-1] == ' ')
+			if idx := strings.Index(autoRefs, "HEAD"); idx != -1 && autoRefs[idx-1] != '/' {
 				autoRefs = strings.Replace(autoRefs, "HEAD", "HEAD"+status, 1)
 			}
 			autoRefs = strings.ReplaceAll(autoRefs, "tag:", "{magenta}tag:{/magenta}")
@@ -496,12 +497,13 @@ func getRefs() (map[string][]string, error) {
 		return m, cli.Exit(errBuf.String(), cmd.ProcessState.ExitCode())
 	}
 
-	if fileExistsInRepo("/rebase-merge/git-rebase-todo") {
-		rebase, err := readFileInRepo("/rebase-merge/git-rebase-todo")
+	if fileExistsInRepo("rebase-merge/git-rebase-todo") {
+		rebase, err := readFileInRepo("rebase-merge/git-rebase-todo")
 		if err != nil {
 			return nil, err
 		}
 		split := strings.Split(rebase, "\n")
+		fmt.Printf("%+v\n", split)
 		curr := ""
 		matches := rebaseRefRegex.FindStringSubmatch(rebase)
 		if len(matches) == 0 {
@@ -516,9 +518,10 @@ func getRefs() (map[string][]string, error) {
 			matches := rebaseRefRegex.FindStringSubmatch(line)
 			if len(matches) == 1 {
 				curr = matches[1]
-				break
 			}
 		}
+
+		println("curr: ", curr)
 
 		if curr != "" {
 			/// resolve the ref to a commit hash
@@ -550,12 +553,12 @@ func getStatus() (string, error) {
 	dirty := ""
 	midFlow := ""
 
-	hasChangeUnstagedCmd := exec.Command("git", "-C", config.repoPath, "diff", "--shortstat")
-	hasChangeStagedCmd := exec.Command("git", "-C", config.repoPath, "diff", "--shortstat", "--cached")
-	hasStashCmd := exec.Command("git", "-C", config.repoPath, "stash", "list")
-	hasUntrackedCmd := exec.Command("git", "-C", config.repoPath, "ls-files", "--others", "--exclude-standard")
+	hasChangeUnstagedCmd := makeGitCommand("diff", "--shortstat")
+	hasChangeStagedCmd := makeGitCommand("diff", "--shortstat", "--cached")
+	hasStashCmd := makeGitCommand("stash", "list")
+	hasUntrackedCmd := makeGitCommand("ls-files", "--others", "--exclude-standard")
 
-	x, err := hasChangeUnstagedCmd.Output()
+	x, err := readOutput(hasChangeUnstagedCmd)
 	if err != nil {
 		fmt.Println(x)
 		return "", err
@@ -565,7 +568,7 @@ func getStatus() (string, error) {
 		dirty += "*"
 	}
 
-	x, err = hasChangeStagedCmd.Output()
+	x, err = readOutput(hasChangeStagedCmd)
 	if err != nil {
 		return "", err
 	}
@@ -574,7 +577,7 @@ func getStatus() (string, error) {
 		dirty += "+"
 	}
 
-	x, err = hasStashCmd.Output()
+	x, err = readOutput(hasStashCmd)
 	if err != nil {
 		return "", err
 	}
@@ -583,7 +586,7 @@ func getStatus() (string, error) {
 		dirty += "$"
 	}
 
-	x, err = hasUntrackedCmd.Output()
+	x, err = readOutput(hasUntrackedCmd)
 	if err != nil {
 		return "", err
 	}
@@ -596,27 +599,27 @@ func getStatus() (string, error) {
 	}
 
 	/// midflow
-	if fileExistsInRepo("/rebase-merge") {
-		if fileExistsInRepo("/rebase-merge/interactive") {
+	if fileExistsInRepo("rebase-merge") {
+		if fileExistsInRepo("rebase-merge/interactive") {
 			midFlow = "|REBASE-i"
 		} else {
 			midFlow = "|REBASE-m"
 		}
-	} else if fileExistsInRepo("/rebase-apply") {
-		if fileExistsInRepo("/rebase-apply/rebasing") {
+	} else if fileExistsInRepo("rebase-apply") {
+		if fileExistsInRepo("rebase-apply/rebasing") {
 			midFlow = "|REBASE"
-		} else if fileExistsInRepo("/rebase-apply/applying") {
+		} else if fileExistsInRepo("rebase-apply/applying") {
 			midFlow = "|AM"
 		} else {
 			midFlow = "|AM/REBASE"
 		}
-	} else if fileExistsInRepo("/MERGE_HEAD") {
+	} else if fileExistsInRepo("MERGE_HEAD") {
 		midFlow = "|MERGING"
-	} else if fileExistsInRepo("/CHERRY_PICK_HEAD") {
+	} else if fileExistsInRepo("CHERRY_PICK_HEAD") {
 		midFlow = "|CHERRY-PICKING"
-	} else if fileExistsInRepo("/REVERT_HEAD") {
+	} else if fileExistsInRepo("REVERT_HEAD") {
 		midFlow = "|REVERTING"
-	} else if fileExistsInRepo("/BISECT_LOG") {
+	} else if fileExistsInRepo("BISECT_LOG") {
 		midFlow = "|BISECTING"
 	}
 	return dirty + midFlow, nil
