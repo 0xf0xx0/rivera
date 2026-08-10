@@ -5,20 +5,26 @@ display the git river, like git-forest
 
 options:
 
-	--repository path, --repo path                              repository path to use (default: ".")
-	--hashlength len, --hashlen len, -l len                     length of the commit hash (default: 8)
-	--style num, -s num                                         style num to select (1-5) (default: 1)
-	--subvinedepth uint, --svdepth uint, --depth uint, -d uint  maximum length of merge subvines (default: 2)
-	--graphmarginleft uint, --marginl uint                      left margin of the commit graph (default: 2)
-	--graphmarginright uint, --marginr uint                     right margin of the commit graph (default: 1)
-	--all, -a                                                   display all branches
-	--reverse, -r                                               reverse the flow
-	--branchcolors color,color[,color]                          comma separated color,color[,color] used for branches, passed straight to oigiki (default: "red, blue, yellow, green, cyan, magenta, white")
-	--maxgitrecursedepth uint, --mgrd uint                      maximum depth to search for a .git dir (default: 8)
-	--help, -h                                                  show help
-	--version, -v                                               print the version
-	--color                                                     force color output
-	--nocolor, --stdout                                         disable color output
+	--repository path, --repo path          repository path to use (default: ".")
+	--start commithash                      commithash to start at
+	--end commithash                        commithash to end at
+	--hashlength len, --hashlen len, -l len length of the commit hash (min: 4) (default: 0)
+	--messagelength len, --msglen len       length of the commit message (default: 50)
+	--style num, -s num                     style num to select (1-5) (default: 1)
+	--userstyle chars                       graph chars to use for the commit graph (format: ABDO.efg.IKm.xyz.tCMr)
+	--subvinedepth uint, --svdepth uint     maximum length of merge subvines (default: 2)
+	--graphmarginleft uint, --marginl uint  left margin of the commit graph (default: 2)
+	--graphmarginright uint, --marginr uint right margin of the commit graph (default: 1)
+	--all, -a                               display all branches
+	--smooth-overpass                       smooth out overpasses, ex: '═╪═╪═╪' -> '══════'
+	--reverse, -r                           reverse the flow
+	--status                                display the git status
+	--branchcolors color,color[,color]      comma separated color,color[,color] used for branches, passed straight to oigiki (default: "red, blue, yellow, green, cyan, magenta, white")
+	--maxgitrecursedepth uint, --mgrd uint  maximum depth to search for a .git dir (default: 8)
+	--help, -h                              show help
+	--version, -v                           print the version
+	--color                                 force color output
+	--nocolor, --stdout                     disable color output
 */
 package main
 
@@ -204,7 +210,7 @@ func main() {
 			},
 			&cli.BoolFlag{
 				Name:  "smooth-overpass",
-				Usage: "convert ODODO overpasses to OOOOO",
+				Usage: "smooth out overpasses, ex: '═╪═╪═╪' -> '══════'",
 				Value: false,
 			},
 			&cli.BoolFlag{

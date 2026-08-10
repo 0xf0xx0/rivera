@@ -9,8 +9,8 @@
 - the graph is reversed by default, with the root at the top and tip(s) at the bottom
 - persistent branch coloring
 - `--repository` option to pass a path (no more needing to `cd` beforepaw)
-- more control over overpasses (no more ODODO -> OOOOO)
-  ex: overpass becomes `======` instead of `=-=-=-`
+- branch overpass smoothing is configurable with `--smooth-overpass`
+  ex: overpass becomes `══════` instead of `═╪═╪═╪`
 - accepts git args (`git-rivera --rivera-arg -- --git-arg, --git-arg-2`)
 
 ## install
