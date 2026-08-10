@@ -761,8 +761,6 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) string {
 /// beautification
 
 func visFan(line, visType string) string {
-	isBranch := visType == "branch"
-
 	/// build the overpass, if applicable
 	line = fanRegex.ReplaceAllStringFunc(line, func(match string) string {
 		return tr(match, " I", "DO")
@@ -785,7 +783,7 @@ func visFan(line, visType string) string {
 	}
 
 	/// replace with the branch chars
-	if isBranch {
+	if visType == "branch" {
 		line = tr(line, "efg", "xyz")
 	}
 	return line
@@ -808,27 +806,6 @@ func visFan3(l, r string) string {
 	sb.WriteRune('K')
 	sb.WriteString(visFan2R(r))
 	return sb.String()
-}
-
-func clearColorHintsUnderMatch(idx int, match string, colorHints *[]string) {
-	for i := idx; i < idx+len(match); i++ {
-		if i == 0 {
-			/// leave the default color
-			continue
-		}
-		(*colorHints)[i] = ""
-	}
-}
-
-// ensures offset is a multiple of 2 before halving
-func offsetHelper(offset int) int {
-	if offset%2 == 1 {
-		offset++
-	}
-	if offset > 0 {
-		offset /= 2
-	}
-	return offset
 }
 
 // this func is kinda dumb and needs a refactor
@@ -1002,10 +979,4 @@ func visPost(line string) string {
 		sb.WriteRune(c)
 	}
 	return sb.String()
-}
-
-// TODO: use the furst color only for the main trunk
-func getBranchColor(n int) string {
-	/// TODO: cache len
-	return global_branchColors[n%len(global_branchColors)]
 }

@@ -15,6 +15,11 @@ import (
 	"github.com/urfave/cli/v3"
 )
 
+/// git-log parsing utils
+
+// fetches a batch of commit lines from git and ensures the commit buffer is filled to max_line,
+// then unshifts the buffer into the return array before copying the next
+// `[2:max_line]` commits for lookahead
 func getLineBlock(reader *bufio.Reader, max_line int) (lines []string, err error) {
 	/// ensure the commit buffer has max_line commits in it (inch right)
 	for len(global_commitBuffer) < max_line {
@@ -36,13 +41,12 @@ func getLineBlock(reader *bufio.Reader, max_line int) (lines []string, err error
 	global_commitBuffer = global_commitBuffer[1:] /// inch right by one
 	lines = append(lines, furstLine)
 
-	/// copy the next `max_line-2` commits for lookahead
+	/// copy the next `[2:max_line]` commits for lookahead
 	for i := 2; i <= max_line; i++ {
 		lines = append(lines, global_commitBuffer[i-2])
 	}
 	return lines, err
 }
-
 func parseLine(line string) (sha, miniSha, message string, parents []string) {
 	matches := lineRegex.FindStringSubmatch(line)
 	if len(matches) == 0 {
@@ -73,6 +77,28 @@ func splitMessage(msg string) (hash string, timestamp time.Time, author, refs, m
 	message = split[4]
 	return
 }
+
+/// coloring utils
+
+// used in visPost, this clears the colors along a line for proper vine and sub-vine coloring
+func clearColorHintsUnderMatch(idx int, match string, colorHints *[]string) {
+	for i := idx; i < idx+len(match); i++ {
+		if i == 0 {
+			/// leave the default color
+			continue
+		}
+		(*colorHints)[i] = ""
+	}
+}
+
+// TODO: use the furst color only for the main trunk
+func getBranchColor(n int) string {
+	/// TODO: cache len
+	return global_branchColors[n%len(global_branchColors)]
+}
+
+/// graphing utils
+
 func roundDown2(n int) int {
 	if n < 0 {
 		return n
@@ -85,6 +111,8 @@ func strExpand(s *string, l int) {
 		(*s) += strings.Repeat(" ", x)
 	}
 }
+
+// TODO: r should be rune
 func replaceAt(s *string, r string, n int) {
 	split := strings.Split(*s, "")
 	split[n] = r
@@ -95,9 +123,19 @@ func removeTrailingBlanks(vine *[]string) {
 		*vine = (*vine)[:len(*vine)-1]
 	}
 }
-func cleanLine(l string) string {
-	return strings.Trim(l, "\r\n\t")
+
+// ensures offset is a multiple of 2 before halving
+func offsetHelper(offset int) int {
+	if offset%2 == 1 {
+		offset++
+	}
+	if offset > 0 {
+		offset /= 2
+	}
+	return offset
 }
+
+/// fs utils
 
 func fileExistsInRepo(path string) bool {
 	_, err := fs.Stat(global_repoRoot, path)
@@ -129,7 +167,17 @@ func recursivelyLookForGitRoot(path string, maxDepth uint) (string, error) {
 	return recursivelyLookForGitRoot(path, maxDepth)
 }
 
+/// misc utils
+
+func cleanLine(l string) string {
+	return strings.Trim(l, "\r\n\t")
+}
+
 // useful func generated while throwing perl at gpt-oss
+//
+// takes an input string and replaces all characters in `from` with the corresponding character in `to`
+//
+// from and to must be the same length!
 func tr(source, from, to string) string {
 	var b strings.Builder
 	for _, r := range []rune(source) {
