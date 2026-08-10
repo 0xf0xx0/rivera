@@ -1,7 +1,7 @@
 /*
 git-rivera/git-河流
 
-display the git river, like git-forest
+display a git river, like git-forest
 
 options:
 
@@ -12,7 +12,7 @@ options:
 	--messagelength len, --msglen len       length of the commit message (default: 50)
 	--style num, -s num                     style num to select (1-5) (default: 1)
 	--userstyle chars                       graph chars to use for the commit graph (format: ABDO.efg.IKm.xyz.tCMr)
-	--subvinedepth uint, --svdepth uint     maximum length of merge subvines (default: 2)
+	--subvinedepth uint, --svdepth uint     internal lookahead depth for branches, not sure what this does exactly (default: 2)
 	--graphmarginleft uint, --marginl uint  left margin of the commit graph (default: 2)
 	--graphmarginright uint, --marginr uint right margin of the commit graph (default: 1)
 	--all, -a                               display all branches
@@ -53,8 +53,7 @@ import (
 const (
 	styleReplace        = "ABDO.efg.IKm.xyz.tCMr"
 	DATE_FMT            = "2006-01-02 15:04"
-	commandHelpTemplate = `Name:
-   {bold}{green}{{.Name}} {/}- {blue}{{.Usage}}{/}
+	commandHelpTemplate = `   {bold}{green}{{.Name}} - {blue}{{.Usage}}{/}
 
 Usage:
    {green}{{.Name}} {blue}[options]{/}
@@ -132,7 +131,7 @@ func main() {
 	app := &cli.Command{
 		Name:                   "git-rivera",
 		Version:                "1.0.0+g" + buildCommit,
-		Usage:                  "display the git river, like git-forest",
+		Usage:                  "display a git river, like git-forest",
 		UseShortOptionHandling: true,
 		MutuallyExclusiveFlags: []cli.MutuallyExclusiveFlags{
 			{
@@ -191,7 +190,7 @@ func main() {
 			},
 			&cli.Uint8Flag{
 				Name:    "subvinedepth",
-				Usage:   "maximum length of merge subvines",
+				Usage:   "internal lookahead depth for branches, not sure what this does exactly",
 				Aliases: []string{"svdepth"},
 				Value:   2,
 			},
