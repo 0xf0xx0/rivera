@@ -267,6 +267,19 @@ func main() {
 			config.smoothOverpass = ctx.Bool("smooth-overpass")
 			config.style = int(ctx.Uint8("style"))
 			config.userStyle = ctx.String("userstyle")
+			config.msgLen = int(ctx.Uint8("messagelength"))
+			config.leftMargin = int(ctx.Uint8("graphmarginleft"))
+			config.rightMargin = int(ctx.Uint8("graphmarginright"))
+			config.subvineDepth = int(ctx.Uint8("svdepth"))
+			global_branchColors = strings.Split(ctx.String("branchcolors"), ",")
+			for idx, color := range global_branchColors {
+				color = strings.TrimSpace(cleanLine(color))
+				_, tagType := oigiki.GetTagEscapeCode(color)
+				if tagType == oigiki.TagTypeUnknown {
+					return cli.Exit(fmt.Sprintf("invalid branch color: %q", color), 1)
+				}
+				global_branchColors[idx] = color
+			}
 
 			/// use the length of the short commit hash from git as the default length
 			/// NOTE: this has the fun side effect of being the only thing alerting us to an empty repo!
@@ -280,19 +293,6 @@ func main() {
 
 			if ctx.Uint8("hashlength") != 0 {
 				config.hashLen = int(min(max(4, ctx.Uint8("hashlength")), 40))
-			}
-			config.msgLen = int(ctx.Uint8("messagelength"))
-			config.leftMargin = int(ctx.Uint8("graphmarginleft"))
-			config.rightMargin = int(ctx.Uint8("graphmarginright"))
-			config.subvineDepth = int(ctx.Uint8("svdepth"))
-			global_branchColors = strings.Split(ctx.String("branchcolors"), ",")
-			for idx, color := range global_branchColors {
-				color = strings.TrimSpace(cleanLine(color))
-				_, tagType := oigiki.GetTagEscapeCode(color)
-				if tagType == oigiki.TagTypeUnknown {
-					return cli.Exit(fmt.Sprintf("invalid branch color: %q", color), 1)
-				}
-				global_branchColors[idx] = color
 			}
 
 			//////
