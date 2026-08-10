@@ -25,7 +25,7 @@ func makeGitCommand(gitCmdArgs ...string) *exec.Cmd {
 	return cmd
 }
 func readOutput(gitCmd *exec.Cmd) (string, error) {
-	output, err := gitCmd.Output()
+	output, err := gitCmd.CombinedOutput()
 	if err != nil {
 		println(err.Error(), config.repoPath)
 		return "", err

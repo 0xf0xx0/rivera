@@ -37,7 +37,6 @@ import (
 	"io/fs"
 	"log"
 	"os"
-	"os/exec"
 	"os/signal"
 	"regexp"
 	"runtime/debug"
@@ -282,8 +281,7 @@ func main() {
 
 			/// use the length of the short commit hash from git as the default length
 			/// NOTE: this has the fun side effect of being the only thing alerting us to an empty repo!
-			cmd := exec.Command("git", "-C", config.repoPath,
-				"rev-parse", "--short", "HEAD")
+			cmd := makeGitCommand("rev-parse", "--short", "HEAD")
 			output, err := cmd.CombinedOutput()
 			if err != nil {
 				return cli.Exit(strings.TrimSpace(string(output)), cmd.ProcessState.ExitCode())
@@ -328,8 +326,7 @@ func processCommits() error {
 	/// it breaks when you change it
 	PRETTY := "%H\t%at\t%an\t%C(reset)%C(auto)%d%C(reset)\t%s"
 
-	cmd := exec.Command("git", "-C", config.repoPath,
-		"log", "--date-order", "--pretty=format:<%H><%h><%P>"+PRETTY)
+	cmd := makeGitCommand("log", "--date-order", "--pretty=format:<%H><%h><%P>"+PRETTY)
 	if config.displayAll {
 		cmd.Args = append(cmd.Args, "--all", "HEAD")
 	}
@@ -356,12 +353,14 @@ func processCommits() error {
 		/// we only collect lines when reversing
 		collectedLines = make([]string, 0, config.subvineDepth*32)
 	}
+
 	/// start by printing all lines; --start and --end flip this
 	printlines := true
 	/// if --start is passed, dont print any of the preceding lines
 	if config.start != "" {
 		printlines = false
 	}
+
 	for {
 		lines, err := getLineBlock(reader, config.subvineDepth)
 		if err != nil {
