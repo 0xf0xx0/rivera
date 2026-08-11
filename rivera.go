@@ -10,8 +10,8 @@ options:
 	--end commithash                        commithash to end at
 	--hashlength len, --hashlen len, -l len length of the commit hash (min: 4) (default: 0)
 	--messagelength len, --msglen len       length of the commit message (default: 50)
-	--style num, -s num                     style num to select (1-5) (default: 1)
-	--userstyle chars                       graph chars to use for the commit graph (format: ABDO.efg.IKm.xyz.tCMr)
+	--style num, -s num                     style num to select (0-5) (default: 1)
+	--userstyle chars                       graph chars to use (format: ABDO.efg.IKm.xyz.tCMr)
 	--subvinedepth uint, --svdepth uint     internal lookahead depth for branches, not sure what this does exactly (default: 2)
 	--graphmarginleft uint, --marginl uint  left margin of the commit graph (default: 2)
 	--graphmarginright uint, --marginr uint right margin of the commit graph (default: 1)
@@ -55,7 +55,7 @@ const (
 	commandHelpTemplate = `   {bold}{green}{{.Name}} - {blue}{{.Usage}}{/}
 
 Usage:
-   {green}{{.Name}} {blue}[options]{/}
+   {green}{{.Name}} {blue}[options] [-- --gitopt1 ... --gitoptN]{/}
 
 Options:{blue}
    {{range .VisibleFlags}}{{.String}}
@@ -182,13 +182,13 @@ func main() {
 			},
 			&cli.Uint8Flag{
 				Name:    "style",
-				Usage:   "style `num` to select (1-5)",
+				Usage:   "style `num` to select (0-5)",
 				Aliases: []string{"s"},
 				Value:   1,
 			},
 			&cli.StringFlag{
 				Name:  "userstyle",
-				Usage: "graph `chars` to use for the commit graph (format: ABDO.efg.IKm.xyz.tCMr)",
+				Usage: "graph `chars` to use (format: ABDO.efg.IKm.xyz.tCMr)",
 			},
 			&cli.Uint8Flag{
 				Name:    "subvinedepth",

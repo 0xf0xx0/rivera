@@ -50,8 +50,8 @@ git-rivera
 	--end commithash                        commithash to end at
 	--hashlength len, --hashlen len, -l len length of the commit hash (min: 4) (default: 0)
 	--messagelength len, --msglen len       length of the commit message (default: 50)
-	--style num, -s num                     style num to select (1-5) (default: 1)
-	--userstyle chars                       graph chars to use for the commit graph (format: ABDO.efg.IKm.xyz.tCMr)
+	--style num, -s num                     style num to select (0-5) (default: 1)
+	--userstyle chars                       graph chars to use (format: ABDO.efg.IKm.xyz.tCMr)
 	--subvinedepth uint, --svdepth uint     internal lookahead depth for branches, not sure what this does exactly (default: 2)
 	--graphmarginleft uint, --marginl uint  left margin of the commit graph (default: 2)
 	--graphmarginright uint, --marginr uint right margin of the commit graph (default: 1)
@@ -67,7 +67,13 @@ git-rivera
 	--nocolor, --stdout                     disable color output
 ```
 
-## custom graph chars `--customstyle`
+## `--userstyle` usage
+```sh
+git-rivera --userstyle "├┤──.┌┬┐.│┼─.└┴┘.↓□▣■"
+```
+use `--style 0` to see the raw graph for reference
+
+## `--userstyle` graph chars
 
 - `A`: branch to right
 - `B`: branch to left
@@ -86,7 +92,7 @@ git-rivera
 - `x`: branch visual left (╚)
 - `y`: branch visual center (╩)
 - `z`: branch visual right (╝)
-- `*`: filler
+- `.`: separator
 
 ## todo
 
