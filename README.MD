@@ -2,13 +2,14 @@
 
 [git-foresta](https://github.com/takaaki-kasai/git-foresta) in go
 
-![screenshot of git-rivera output, printing cli-pride-flags](./showoff.png)
+![screenshot of git-rivera output, printing esp-miner with the options '--all --start 86523a69b --end 893668fba --style 6'](./showoff.png)
 
 ## features/differences from git-foresta
 
 - the graph is reversed by default, with the root at the top and tip(s) at the bottom
 - branches are colored down the entire length instead of only at commits
 - `--repository` option to pass a path (no more needing to `cd` beforepaw)
+- `--start` and `--end` to display a section of the graph
 - branch overpass smoothing is configurable with `--smooth-overpass`
   ex: overpass becomes `══════` instead of `═╪═╪═╪`
 - accepts git args (`git-rivera --rivera-arg -- --git-arg, --git-arg-2`)
