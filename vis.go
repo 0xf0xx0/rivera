@@ -217,7 +217,6 @@ func visPost(line string) string {
 			{
 				line = tr(line, styleReplace, "╠╣══.╔╦╗.║╬─.╚╩╝.╓║║╙")
 			}
-			line = tr(line, styleReplace, "╠╣══.╔╦╗.║╬─.╚╩╝.╓║║╙")
 		/// curves
 		case 15, 4:
 			{
@@ -227,6 +226,11 @@ func visPost(line string) string {
 		case 5:
 			{
 				line = tr(line, styleReplace, "┣┫━━.┏┳┓.┃╋━.┗┻┛.┳┣┣┻")
+			}
+		/// thicc with dashed bridge and commit squares
+		case 6:
+			{
+				line = tr(line, styleReplace, "┣┫╍╍.┏┳┓.┃╋━.┗┻┛.┳□▣┻")
 			}
 		}
 	}
