@@ -143,7 +143,7 @@ func removeTrailingBlanks(vine *[]string) {
 }
 
 // ensures offset is a multiple of 2 before halving
-func offsetHelper(offset int) int {
+func idxToVinePos(offset int) int {
 	if offset%2 == 1 {
 		offset++
 	}

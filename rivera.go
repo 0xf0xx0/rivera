@@ -10,7 +10,7 @@ options:
 	--end commithash                        commithash to end at
 	--hashlength len, --hashlen len, -l len length of the commit hash (min: 4) (default: 0)
 	--messagelength len, --msglen len       length of the commit message (default: 50)
-	--style num, -s num                     style num to select (0-5) (default: 1)
+	--style num, -s num                     style num to select (0-7) (default: 1)
 	--userstyle chars                       graph chars to use (format: ABDO.efg.IKm.xyz.tCMr)
 	--subvinedepth uint, --svdepth uint     internal lookahead depth for branches, not sure what this does exactly (default: 2)
 	--graphmarginleft uint, --marginl uint  left margin of the commit graph (default: 2)
@@ -55,7 +55,7 @@ const (
 	commandHelpTemplate = `   {bold}{green}{{.Name}} - {blue}{{.Usage}}{/}
 
 Usage:
-   {green}{{.Name}} {blue}[options] [-- --gitopt1 ... --gitoptN]{/}
+   {green}{{.Name}} {blue}[options] [-- --git-log-opt1 ... --git-log-optN]{/}
 
 Options:{blue}
    {{range .VisibleFlags}}{{.String}}
@@ -83,7 +83,7 @@ var (
 
 	leftxB = regexp.MustCompile(`(x\w*B)`)
 	leftxz = regexp.MustCompile(`(x\w*z)`)
-	leftAg = regexp.MustCompile(`A(\w*g)`)
+	leftAg = regexp.MustCompile(`(A\w*g)`)
 
 	righteB = regexp.MustCompile(`(e\w*)B`)
 	righteg = regexp.MustCompile(`(e\w*)g`)
@@ -182,7 +182,7 @@ func main() {
 			},
 			&cli.Uint8Flag{
 				Name:    "style",
-				Usage:   "style `num` to select (0-5)",
+				Usage:   "style `num` to select (0-7)",
 				Aliases: []string{"s"},
 				Value:   1,
 			},

@@ -87,7 +87,7 @@ func visPost(line string) string {
 	if matches := leftcii.FindStringSubmatch(line); len(matches) > 0 {
 		/// the middle I needs to have the same color as the last
 		idx := strings.Index(line, matches[0]) + 1
-		offset := offsetHelper(idx)
+		offset := idxToVinePos(idx)
 		colorHints[idx] = getBranchColor(offset)
 	}
 
@@ -107,26 +107,26 @@ func visPost(line string) string {
 			/// if source is directly off a main branch, set the overpass color as the branch color
 			/// otherwise inherit the color from the previous column (as thats the source)
 			if idx%2 == 0 {
-				colorHints[idx] = getBranchColor(offsetHelper(idx))
+				colorHints[idx] = getBranchColor(idxToVinePos(idx))
 			} else {
-				colorHints[idx] = getBranchColor(offsetHelper(idx - 1))
+				colorHints[idx] = getBranchColor(idxToVinePos(idx - 1))
 			}
 
 			/// the last column is the destination, set the color accordingly
-			colorHints[endIdx] = getBranchColor(offsetHelper(endIdx))
+			colorHints[endIdx] = getBranchColor(idxToVinePos(endIdx))
 		} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
-			offset := offsetHelper(idx)
+			offset := idxToVinePos(idx)
 			colorHints[idx] = getBranchColor(offset)
 		} else if matches := righteg.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
 			endIdx := idx + len(matches[1]) - 1
-			offset := offsetHelper(endIdx)
+			offset := idxToVinePos(endIdx)
 			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
 			colorHints[idx] = getBranchColor(offset)
 		} else if matches := rightzI.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
-			offset := offsetHelper(idx)
+			offset := idxToVinePos(idx)
 			/// TODO: none of my repos have a z...I, does this also need to clear colorHints?
 			colorHints[idx] = getBranchColor(offset)
 		}
@@ -135,17 +135,17 @@ func visPost(line string) string {
 		/// overpasses inherit only the base color, so we zero-out colorHints over the length of the match
 		if matches := leftAg.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
-			offset := offsetHelper(idx)
+			offset := idxToVinePos(idx)
 			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
 			colorHints[idx] = getBranchColor(offset - 1)
 		} else if matches := rightAz.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
 			endIdx := idx + len(matches[1]) - 1
-			offset := offsetHelper(idx)
+			offset := idxToVinePos(idx)
 			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
 			/// color the merge overpass (minus the ending "A"), but only if it connects to another vine
 			if endIdx%2 == 0 {
-				colorHints[idx+1] = getBranchColor(offsetHelper(endIdx))
+				colorHints[idx+1] = getBranchColor(idxToVinePos(endIdx))
 			}
 			/// color the "A"
 			colorHints[idx] = getBranchColor(offset)
@@ -154,38 +154,41 @@ func visPost(line string) string {
 		/// everything above, but in normal order
 		if matches := leftxB.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
-			offset := offsetHelper(idx)
+			offset := idxToVinePos(idx)
 			colorHints[idx] = getBranchColor(offset)
 		} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
-			offset := offsetHelper(idx)
+			offset := idxToVinePos(idx)
 			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
 
 			if idx%2 == 0 {
 				colorHints[idx] = getBranchColor(offset)
 			} else {
-				colorHints[idx] = getBranchColor(offsetHelper(idx - 1))
+				colorHints[idx] = getBranchColor(idxToVinePos(idx - 1))
 			}
 
 			// test = testColorLogHelper(idx, line, matches[1])
 		} else if matches := rightzI.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
-			offset := offsetHelper(idx)
+			offset := idxToVinePos(idx)
 			colorHints[idx] = getBranchColor(offset)
 		}
 
 		if matches := leftAg.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
 			endIdx := idx + len(matches[1]) - 1
-			offset := offsetHelper(idx - 1)
+			offset := idxToVinePos(idx)
 
-			/// we take the index of `g` to get the correct color
 			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
-			colorHints[idx] = getBranchColor(offsetHelper(endIdx))
+
+			/// set the `A` color
 			colorHints[idx-1] = getBranchColor(offset)
+			/// we take the index of `g` to get the correct color for the overpass
+			colorHints[idx] = getBranchColor(idxToVinePos(endIdx))
 		} else if matches := rightAz.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
-			offset := offsetHelper(idx)
+			offset := idxToVinePos(idx)
+
 			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
 
 			colorHints[idx] = getBranchColor(offset)
@@ -232,6 +235,7 @@ func visPost(line string) string {
 			{
 				line = tr(line, styleReplace, "┣┫╍╍.┏┳┓.┃╋━.┗┻┛.┳□▣┻")
 			}
+		/// dashed with thicc bridge and commit
 		case 7:
 			{
 				line = tr(line, styleReplace, "┣┫━━.┏┳┓.┋╋━.┗┻┛.╻□▣╿")
@@ -259,7 +263,7 @@ func testColorLogHelper(idx int, line string, match string) string {
 	testPad := fmt.Sprintf("%s %s%s",
 		strings.Repeat(" ", config.hashLen), strings.Repeat(" ", len(DATE_FMT)), strings.Repeat(" ", config.leftMargin),
 	)
-	theSlab := fmt.Sprintf("i: %d o: %d]", idx, offsetHelper(idx))
+	theSlab := fmt.Sprintf("i: %d o: %d]", idx, idxToVinePos(idx))
 	theSlab = fmt.Sprintf("\n{/}{blackbright}%s%s%s (%s)\n", theSlab, testPad[:len(testPad)-(len(theSlab))], line, match)
 	/// you didnt ignore D: king ramses curse upon ye
 	return theSlab
