@@ -98,10 +98,35 @@ func splitMessage(msg string) (hash string, timestamp time.Time, author, refs st
 
 /// coloring utils
 
+// TODO: better name
+// finds start, then looks for end, then returns their indices in the line
+// and if a match was found
+func findBridgeMergeMatch(start, end rune, line string) (int, int, bool) {
+	startIdx := -1
+	endIdx := -1
+	for i, c := range line {
+		/// look for start furst
+		if startIdx == -1 {
+			if c == start {
+				startIdx = i
+			}
+			continue
+		}
+		/// then look for end
+		if endIdx == -1 {
+			if c == end {
+				endIdx = i
+				break
+			}
+		}
+	}
+	/// we dont need to check both
+	return startIdx, endIdx, endIdx != -1
+}
+
 // used in visPost, this clears the colors along a line from idx to idx+len(match) for proper vine and sub-vine coloring
-func clearColorHintsUnderMatch(idx int, match string, colorHints *[]string) {
-	endIdx := idx + len(match)
-	for i := idx; i < endIdx; i++ {
+func clearColorHintsInRange(start, end int, colorHints *[]string) {
+	for i := start; i < end; i++ {
 		if i == 0 {
 			/// leave the default color
 			continue

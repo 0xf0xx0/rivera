@@ -80,15 +80,6 @@ var (
 	fanMR         = regexp.MustCompile(`S(.*s)`)
 	/// fmt pt 2
 	leftcii = regexp.MustCompile(`(C|I)II`)
-
-	leftxB = regexp.MustCompile(`(x\w*B)`)
-	leftxz = regexp.MustCompile(`(x\w*z)`)
-	leftAg = regexp.MustCompile(`(A\w*g)`)
-
-	righteB = regexp.MustCompile(`(e\w*)B`)
-	righteg = regexp.MustCompile(`(e\w*)g`)
-	rightzI = regexp.MustCompile(`z(\w*I)`) /// TODO: needed?
-	rightAz = regexp.MustCompile(`(A\w*z)`)
 )
 
 // state

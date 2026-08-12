@@ -95,103 +95,90 @@ func visPost(line string) string {
 	/// idx is the actual printed index
 	// test := testColorLogHelper(0, line, "")
 	if config.reverse {
-		if matches := leftxB.FindStringSubmatch(line); len(matches) > 0 {
-			idx := strings.Index(line, matches[1])
-			endIdx := idx + len(matches[1]) - 1
-
+		start, end, ok := findBridgeMergeMatch('x', 'B', line)
+		if ok {
 			/// colorHints needs clearing, the source branch color (left)
 			/// needs to run all the way until it hits the target branch color (right)
 			/// if the x is on an odd column it inherits the color automatically
-			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
+			clearColorHintsInRange(start, end, &colorHints)
 
 			/// if source is directly off a main branch, set the overpass color as the branch color
 			/// otherwise inherit the color from the previous column (as thats the source)
-			if idx%2 == 0 {
-				colorHints[idx] = getBranchColor(idxToVinePos(idx))
+			if start%2 == 0 {
+				colorHints[start] = getBranchColor(idxToVinePos(start))
 			} else {
-				colorHints[idx] = getBranchColor(idxToVinePos(idx - 1))
+				colorHints[start] = getBranchColor(idxToVinePos(start - 1))
 			}
 
 			/// the last column is the destination, set the color accordingly
-			colorHints[endIdx] = getBranchColor(idxToVinePos(endIdx))
-		} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
-			idx := strings.Index(line, matches[1])
-			offset := idxToVinePos(idx)
-			colorHints[idx] = getBranchColor(offset)
-		} else if matches := righteg.FindStringSubmatch(line); len(matches) > 0 {
-			idx := strings.Index(line, matches[1])
-			endIdx := idx + len(matches[1]) - 1
-			offset := idxToVinePos(endIdx)
-			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
-			colorHints[idx] = getBranchColor(offset)
-		} else if matches := rightzI.FindStringSubmatch(line); len(matches) > 0 {
-			idx := strings.Index(line, matches[1])
-			offset := idxToVinePos(idx)
+			colorHints[end] = getBranchColor(idxToVinePos(end))
+		} else if start, _, ok = findBridgeMergeMatch('e', 'B', line); ok {
+			offset := idxToVinePos(start)
+			colorHints[start] = getBranchColor(offset)
+		} else if start, end, ok = findBridgeMergeMatch('e', 'g', line); ok {
+			offset := idxToVinePos(end)
+			clearColorHintsInRange(start, end, &colorHints)
+			colorHints[start] = getBranchColor(offset)
+		} else if start, _, ok = findBridgeMergeMatch('z', 'I', line); ok {
+			offset := idxToVinePos(start)
 			/// TODO: none of my repos have a z...I, does this also need to clear colorHints?
-			colorHints[idx] = getBranchColor(offset)
+			colorHints[start] = getBranchColor(offset)
 		}
 
-		/// the overpasses needs to be done separately because the regexes above may overlap
+		/// the overpasses needs to be done separately because the patterns above may overlap
 		/// overpasses inherit only the base color, so we zero-out colorHints over the length of the match
-		if matches := leftAg.FindStringSubmatch(line); len(matches) > 0 {
-			idx := strings.Index(line, matches[1])
-			offset := idxToVinePos(idx)
-			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
-			colorHints[idx] = getBranchColor(max(offset-1, 0))
-		} else if matches := rightAz.FindStringSubmatch(line); len(matches) > 0 {
-			idx := strings.Index(line, matches[1])
-			endIdx := idx + len(matches[1]) - 1
-			offset := idxToVinePos(idx)
-			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
+		if start, end, ok = findBridgeMergeMatch('A', 'g', line); ok {
+			/// +1 to get the right color, and the full match
+			offset := idxToVinePos(start + 1)
+			clearColorHintsInRange(start, end+1, &colorHints)
+			colorHints[start] = getBranchColor(max(offset-1, 0))
+		} else if start, end, ok = findBridgeMergeMatch('A', 'z', line); ok {
+			offset := idxToVinePos(start)
+			clearColorHintsInRange(start, end, &colorHints)
 			/// color the merge overpass (minus the ending "A"), but only if it connects to another vine
-			if endIdx%2 == 0 {
-				colorHints[idx+1] = getBranchColor(idxToVinePos(endIdx))
+			if end%2 == 0 {
+				colorHints[start+1] = getBranchColor(idxToVinePos(end))
 			}
 			/// color the "A"
-			colorHints[idx] = getBranchColor(offset)
+			colorHints[start] = getBranchColor(offset)
 		}
 	} else {
+		start, end, ok := findBridgeMergeMatch('x', 'B', line)
 		/// everything above, but in normal order
-		if matches := leftxB.FindStringSubmatch(line); len(matches) > 0 {
-			idx := strings.Index(line, matches[1])
-			offset := idxToVinePos(idx)
-			colorHints[idx] = getBranchColor(offset)
-		} else if matches := righteB.FindStringSubmatch(line); len(matches) > 0 {
-			idx := strings.Index(line, matches[1])
-			offset := idxToVinePos(idx)
-			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
+		if ok {
+			offset := idxToVinePos(start)
+			colorHints[start] = getBranchColor(offset)
+		} else if start, end, ok = findBridgeMergeMatch('e', 'B', line); ok {
+			offset := idxToVinePos(start)
+			clearColorHintsInRange(start, end, &colorHints)
 
-			if idx%2 == 0 {
-				colorHints[idx] = getBranchColor(offset)
+			if start%2 == 0 {
+				colorHints[start] = getBranchColor(offset)
 			} else {
-				colorHints[idx] = getBranchColor(idxToVinePos(idx - 1))
+				colorHints[start] = getBranchColor(idxToVinePos(start - 1))
 			}
 
 			// test = testColorLogHelper(idx, line, matches[1])
-		} else if matches := rightzI.FindStringSubmatch(line); len(matches) > 0 {
-			idx := strings.Index(line, matches[1])
-			offset := idxToVinePos(idx)
-			colorHints[idx] = getBranchColor(offset)
+		} else if start, _, ok = findBridgeMergeMatch('z', 'I', line); ok {
+			offset := idxToVinePos(start)
+			colorHints[start] = getBranchColor(offset)
 		}
 
-		if matches := leftAg.FindStringSubmatch(line); len(matches) > 0 {
-			idx := strings.Index(line, matches[1])
-			endIdx := idx + len(matches[1]) - 1
-			offset := idxToVinePos(idx)
+		if start, end, ok = findBridgeMergeMatch('A', 'g', line); ok {
+			offset := idxToVinePos(start)
 
-			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
+			clearColorHintsInRange(start, end, &colorHints)
 
 			/// set the `A` color
-			colorHints[idx-1] = getBranchColor(offset)
+			colorHints[start] = getBranchColor(offset)
 			/// we take the index of `g` to get the correct color for the overpass
-			colorHints[idx] = getBranchColor(idxToVinePos(endIdx))
-		} else if matches := rightAz.FindStringSubmatch(line); len(matches) > 0 {
-			idx := strings.Index(line, matches[1])
-			offset := idxToVinePos(idx)
+			colorHints[start+1] = getBranchColor(idxToVinePos(end))
+		} else if start, end, ok = findBridgeMergeMatch('A', 'z', line); ok {
+			offset := idxToVinePos(start)
 
-			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
+			clearColorHintsInRange(start, end+1, &colorHints)
 
-			colorHints[idx] = getBranchColor(offset)
+			colorHints[start] = getBranchColor(offset)
 		}
 	}
 
