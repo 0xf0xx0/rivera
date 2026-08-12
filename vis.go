@@ -232,6 +232,10 @@ func visPost(line string) string {
 			{
 				line = tr(line, styleReplace, "┣┫╍╍.┏┳┓.┃╋━.┗┻┛.┳□▣┻")
 			}
+		case 7:
+			{
+				line = tr(line, styleReplace, "┣┫━━.┏┳┓.┋╋━.┗┻┛.╻□▣╿")
+			}
 		}
 	}
 

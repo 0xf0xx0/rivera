@@ -12,9 +12,11 @@
 - `--start` and `--end` to display a section of the graph
 - branch overpass smoothing is configurable with `--smooth-overpass`
   ex: overpass becomes `══════` instead of `═╪═╪═╪`
-- accepts git args (`git-rivera --rivera-arg -- --git-arg, --git-arg-2`)
+- accepts and passes on git args (`git-rivera --rivera-arg -- --git-arg, --git-arg-2`)
 
 ## install
+
+git-rivera depends on git
 
 ```sh
 go install git.0xf0xx0.eth.limo/0xf0xx0/git-rivera@latest
