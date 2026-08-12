@@ -126,7 +126,7 @@ func main() {
 
 	app := &cli.Command{
 		Name:                   "git-rivera",
-		Version:                "1.1.0+g" + buildCommit,
+		Version:                "1.2.0+g" + buildCommit,
 		Usage:                  "display a git river, like git-forest",
 		UseShortOptionHandling: true,
 		MutuallyExclusiveFlags: []cli.MutuallyExclusiveFlags{
