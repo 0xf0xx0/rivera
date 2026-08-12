@@ -3,6 +3,7 @@
 [git-foresta](https://github.com/takaaki-kasai/git-foresta) in go
 
 ![screenshot of git-rivera output, printing esp-miner with the options '--all --start 86523a69b --end 893668fba --style 6'](./showoff.png)
+![screenshot of git-rivera output, printing cli-pride-flags with the option '--end 4d4e1ff'](./showoff2.png)
 
 ## features/differences from git-foresta
 
