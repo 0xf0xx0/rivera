@@ -98,6 +98,8 @@ var config = struct {
 	leftMargin, rightMargin              int
 	reverse, smoothOverpass,
 	displayStatus, displayAll bool
+
+	graphPad string /// used to remove padding allocs
 }{}
 
 var buildCommit = func() string {
@@ -281,6 +283,8 @@ func main() {
 			}
 			global_branchColorsLen = len(global_branchColors)
 
+			config.graphPad = strings.Repeat(" ", config.hashLen+1+len(DATE_FMT)+config.leftMargin)
+
 			/// use the length of the short commit hash from git as the default length
 			/// NOTE: this has the fun side effect of being the only thing alerting us to an empty repo!
 			cmd := makeGitCommand("rev-parse", "--short", "HEAD")
@@ -402,6 +406,11 @@ func processCommits() error {
 
 		/// draw the branches leading to the commit
 		ret.WriteString(vineBranch(&vine, sha))
+
+		/// MAYBE: take fmt string
+		// fmt = "h t g a r m"
+		/// would need to calc graphPad based on fmt
+		// config.graphPad = strings.Repeat(" ", fmtReplace(strings.Split(fmt, "g")[0], ...))
 
 		/// print hash, date, and leftpad
 		ret.WriteString(fmt.Sprintf("{magenta}%s {blue}%s%s",
@@ -660,7 +669,7 @@ func vineBranch(vine *[]string, sha string) string {
 	}
 	removeTrailingBlanks(vine)
 	/// +1 for space between hash and date
-	return fmt.Sprintln(strings.Repeat(" ", config.hashLen+1+len(DATE_FMT)+config.leftMargin) + visPost(visFan(output.String(), true)))
+	return fmt.Sprintln(config.graphPad + visPost(visFan(output.String(), true)))
 }
 func vineCommit(vine *[]string, sha string, parents []string) string {
 	output := "" /// its too much of a pain to use strings.Builder here
@@ -828,5 +837,5 @@ func vineMerge(vine *[]string, sha string, nextShas, parents []string) string {
 			replaceAt(&output, " ", i)
 		}
 	}
-	return fmt.Sprintln(strings.Repeat(" ", config.hashLen+1+len(DATE_FMT)+config.leftMargin) + visPost(visFan(output, false)))
+	return fmt.Sprintln(config.graphPad + visPost(visFan(output, false)))
 }
