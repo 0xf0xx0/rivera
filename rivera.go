@@ -465,7 +465,7 @@ func processCommits() error {
 			collectedLines = append(collectedLines, strings.Split(ret.String(), "\n")...)
 		} else {
 			/// otherwise print as clumps
-			fmt.Print(oigiki.ProcessTags(ret.String()))
+			fmt.Print(oigiki.ProcessTagsFast(ret.String()))
 		}
 	}
 
@@ -474,7 +474,7 @@ func processCommits() error {
 			if x == "" {
 				continue
 			}
-			fmt.Println(oigiki.ProcessTags(x))
+			fmt.Println(oigiki.ProcessTagsFast(x))
 		}
 	}
 
