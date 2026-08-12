@@ -91,11 +91,12 @@ var (
 	rightAz = regexp.MustCompile(`(A\w*z)`)
 )
 
-// global
+// state
 var (
 	global_gitArgs               []string
 	global_commitBuffer          []string
 	global_branchColors          []string /// populated in flag
+	global_branchColorsLen       int
 	global_root, global_repoRoot fs.FS
 )
 
@@ -267,21 +268,27 @@ func main() {
 			config.reverse = !ctx.Bool("reverse")
 			config.displayStatus = ctx.Bool("status")
 			config.smoothOverpass = ctx.Bool("smooth-overpass")
-			config.style = int(ctx.Uint8("style"))
-			config.userStyle = ctx.String("userstyle")
 			config.msgLen = int(ctx.Uint8("messagelength"))
 			config.leftMargin = int(ctx.Uint8("graphmarginleft"))
 			config.rightMargin = int(ctx.Uint8("graphmarginright"))
 			config.subvineDepth = max(1, int(ctx.Uint8("svdepth")))
+			config.style = int(ctx.Uint8("style"))
+			config.userStyle = ctx.String("userstyle")
+			if config.userStyle != "" && len(config.userStyle) != len(styleReplace) {
+				return cli.Exit("invalid userstyle, must follow the format", 1)
+			}
 			global_branchColors = strings.Split(ctx.String("branchcolors"), ",")
 			for idx, color := range global_branchColors {
 				color = strings.TrimSpace(cleanLine(color))
 				_, tagType := oigiki.GetTagEscapeCode(color)
+
+				/// MAYBE: != TagTypeColor?
 				if tagType == oigiki.TagTypeUnknown {
 					return cli.Exit(fmt.Sprintf("invalid branch color: %q", color), 1)
 				}
 				global_branchColors[idx] = color
 			}
+			global_branchColorsLen = len(global_branchColors)
 
 			/// use the length of the short commit hash from git as the default length
 			/// NOTE: this has the fun side effect of being the only thing alerting us to an empty repo!

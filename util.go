@@ -83,13 +83,12 @@ func parseLine(line string) (sha, miniSha, message string, parents []string) {
 }
 func splitMessage(msg string) (hash string, timestamp time.Time, author, refs string, message []rune) {
 	split := strings.Split(msg, "\t")
-	if len(split) == 0 {
+	if len(split) != 5 {
 		return
 	}
 	hash = split[0]
-	// TODO: error
-	t, _ := strconv.Atoi(split[1])
-	timestamp = time.Unix(int64(t), 0)
+	unixSeconds, _ := strconv.Atoi(split[1])
+	timestamp = time.Unix(int64(unixSeconds), 0)
 	/// these can contain unicode, and message in particular can be truncated
 	author = split[2]
 	refs = split[3]
@@ -100,9 +99,9 @@ func splitMessage(msg string) (hash string, timestamp time.Time, author, refs st
 /// coloring utils
 
 // used in visPost, this clears the colors along a line from idx to idx+len(match) for proper vine and sub-vine coloring
-// TODO: match -> endIdx?
 func clearColorHintsUnderMatch(idx int, match string, colorHints *[]string) {
-	for i := idx; i < idx+len(match); i++ {
+	endIdx := idx + len(match)
+	for i := idx; i < endIdx; i++ {
 		if i == 0 {
 			/// leave the default color
 			continue
@@ -113,8 +112,7 @@ func clearColorHintsUnderMatch(idx int, match string, colorHints *[]string) {
 
 // TODO: use the furst color only for the main trunk
 func getBranchColor(n int) string {
-	/// TODO: cache len
-	return global_branchColors[n%len(global_branchColors)]
+	return global_branchColors[n%global_branchColorsLen]
 }
 
 /// graphing utils

@@ -137,7 +137,7 @@ func visPost(line string) string {
 			idx := strings.Index(line, matches[1])
 			offset := idxToVinePos(idx)
 			clearColorHintsUnderMatch(idx, matches[1], &colorHints)
-			colorHints[idx] = getBranchColor(offset - 1)
+			colorHints[idx] = getBranchColor(max(offset-1, 0))
 		} else if matches := rightAz.FindStringSubmatch(line); len(matches) > 0 {
 			idx := strings.Index(line, matches[1])
 			endIdx := idx + len(matches[1]) - 1
