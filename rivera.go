@@ -283,6 +283,7 @@ func main() {
 			}
 			global_branchColorsLen = len(global_branchColors)
 
+			/// +1 for space between hash and date
 			config.graphPad = strings.Repeat(" ", config.hashLen+1+len(DATE_FMT)+config.leftMargin)
 
 			/// use the length of the short commit hash from git as the default length
@@ -668,7 +669,6 @@ func vineBranch(vine *[]string, sha string) string {
 		return ""
 	}
 	removeTrailingBlanks(vine)
-	/// +1 for space between hash and date
 	return fmt.Sprintln(config.graphPad + visPost(visFan(output.String(), true)))
 }
 func vineCommit(vine *[]string, sha string, parents []string) string {
