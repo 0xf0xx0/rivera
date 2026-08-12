@@ -247,11 +247,8 @@ func visPost(line string) string {
 
 // for logging pls ignor
 func testColorLogHelper(idx int, line string, match string) string {
-	testPad := fmt.Sprintf("%s %s%s",
-		strings.Repeat(" ", config.hashLen), strings.Repeat(" ", len(DATE_FMT)), strings.Repeat(" ", config.leftMargin),
-	)
 	theSlab := fmt.Sprintf("i: %d o: %d]", idx, idxToVinePos(idx))
-	theSlab = fmt.Sprintf("\n{/}{blackbright}%s%s%s (%s)\n", theSlab, testPad[:len(testPad)-(len(theSlab))], line, match)
+	theSlab = fmt.Sprintf("\n{/}{blackbright}%s%s%s (%s)\n", theSlab, config.graphPad[:len(config.graphPad)-len(theSlab)], line, match)
 	/// you didnt ignore D: king ramses curse upon ye
 	return theSlab
 }
