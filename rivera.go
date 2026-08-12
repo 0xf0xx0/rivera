@@ -12,7 +12,7 @@ options:
 	--messagelength len, --msglen len       length of the commit message (default: 50)
 	--style num, -s num                     style num to select (0-7) (default: 1)
 	--userstyle chars                       graph chars to use (format: ABDO.efg.IKm.xyz.tCMr)
-	--subvinedepth uint, --svdepth uint     internal lookahead depth for branches, not sure what this does exactly (default: 2)
+	--subvinedepth uint, --svdepth uint     internal lookahead depth for branches, slightly modifies graph | seems like 1-10 is the range, anything further increases processing time for no visual difference (default: 2)
 	--graphmarginleft uint, --marginl uint  left margin of the commit graph (default: 2)
 	--graphmarginright uint, --marginr uint right margin of the commit graph (default: 1)
 	--all, -a                               display all branches
